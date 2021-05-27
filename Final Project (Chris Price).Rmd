@@ -1,0 +1,28 @@
+---
+title: "Final Project"
+author: "Christopher Price"
+date: "5/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(readxl)
+```
+
+```{r}
+schools <- read_xlsx(here::here("US_schools_data.xlsx"))
+```
+
+# Data Cleaning
+```{r}
+
+```
+
+
