@@ -36,8 +36,8 @@ map_theme <- (
 
 
 ```{r include=FALSE}
-schools <- read_xlsx(here::here("FinalProject", "US_schools_data.xlsx"))
-regionizer <- read_csv(here::here("FinalProject", "us census bureau regions and divisions.csv"))
+schools <- read_xlsx(here::here("FinalProject-STAT331", "US_schools_data.xlsx"))
+regionizer <- read_csv(here::here("FinalProject-STAT331", "us census bureau regions and divisions.csv"))
 ```
 
 ```{r}
@@ -48,8 +48,9 @@ schools_cleaned <- schools %>%
     ends_with("READING"), ends_with("MATHEMATICS")
   ) %>%
   mutate(
-    Year = substr(PRIMARY_KEY, 1, 4),
-    State = substring(PRIMARY_KEY, 6)
+    Year = as.numeric(substr(PRIMARY_KEY, 1, 4)),
+    State = substring(PRIMARY_KEY, 6),
+    Decade = Year %/% 10 * 10
   )
 ```
 
@@ -80,6 +81,9 @@ schools_cleaned <- schools_cleaned %>%
     Sex = str_replace(Sex, "A", "all"),
     across(c("State", "Grade", "Race", "Sex", "Test", "Region", "Division"), as.factor)
   )
+
+schools_cleaned <- schools_cleaned %>%
+  filter(!is.na(Region))
 ```
 
 ```{r}
@@ -113,11 +117,127 @@ schools_cleaned_f %>%
 ```
 
 ```{r}
-schools_cleaned_f %>%
+schools_cleaned %>%
   drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(x = `Test Score`)) +
-  geom_ri
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color = Region)) +
+  geom_smooth()
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_point() +
+  facet_wrap(~ Race)
+```
+
+```{r}
+schools_cleaned %>%
+  filter(is.na(Region)) %>%
+  distinct(State)
 ```
 
 
+```{r}
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Test)) +
+  geom_boxplot()
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Region)) +
+  geom_boxplot(position = "dodge")
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Region)) +
+  geom_boxplot(position = "dodge")
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Sex)) +
+  geom_boxplot(position = "dodge")
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
+  geom_boxplot(position = "dodge")
+```
+
+```{r}
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color = Region)) +
+  geom_point() +
+  facet_wrap(Region ~ Decade, ncol = 3)
+
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_point() +
+  facet_wrap(Sex ~ Decade)
+
+
+# NAs for many of the Races for 1990s and 2000s
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_point() +
+  facet_wrap(Race ~ Decade)
+```
+
+```{r}
+math_model <- schools_cleaned %>%
+  filter(str_to_lower(Test) == "mathematics") %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE, data=.)
+
+reading_model <- schools_cleaned %>%
+  filter(str_to_lower(Test) == "reading") %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE, data=.)
+```
+
+```{r}
+summary(math_model)
+summary(reading_model)
+```
+
+```{r}
+schools_cleaned <- within(schools_cleaned, Test <- relevel(Test, ref="MATHEMATICS"))
+
+test_model <- schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test, data=.)
+
+summary(test_model)
+```
+
+```{r}
+test_model <- schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test + Year, data=.)
+
+summary(test_model)
+```
+
+```{r}
+library(olsrr)
+
+temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
+
+model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race + Division + Grade, data=temp)
+
+# We used these functions for STAT 334 (Applied Linear Models) to do variable selection
+# all_sub1 <- ols_step_all_possible(model1)
+best.sub1 <- ols_step_best_subset(model1)
+```
 
