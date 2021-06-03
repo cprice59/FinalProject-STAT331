@@ -1,0 +1,121 @@
+---
+title: "Predicting Test Scores using Linear Regression"
+author: "Group 4"
+date: 2021-06-01
+categories: ["R"]
+tags: ["R Markdown", "plot", "regression"]
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="getting-the-data" class="section level2">
+<h2>Getting the Data</h2>
+<p>We recommend using the <code>read_xlsx()</code> and <code>read_csv()</code> functions for reading in the appropriate data. You can find the <code>schools</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx">here</a> and the <code>regionizer</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv">here</a>. <em>If you just want the cleaned dataset (<code>schools_cleaned</code>), you can find that <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv">here</a></em>.</p>
+</div>
+<div id="exploring-our-cleaned-data" class="section level2">
+<h2>Exploring Our Cleaned Data</h2>
+<div id="some-thoughts-beforehand" class="section level3">
+<h3>Some thoughts beforehand:</h3>
+<ul>
+<li><strong>Since we are trying to predict test scores, that will be our <em>response</em> variable</strong></li>
+<li>We are performing a <strong><em>linear regression</em></strong>, so we should try and explore variables as if they’d be part of a linear model</li>
+<li>When grouping, we need to pay attention to the number of NAs that exist for certain groups</li>
+</ul>
+</div>
+<div id="how-reading-and-math-scores-differ" class="section level3">
+<h3>How Reading and Math Scores Differ</h3>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>We can see some variability in Region with the green boxplot mostly but Race showcases math and reading score distributions that look much different between different Races.</p>
+<div id="lets-take-a-look-at-the-distribution-for-different-regions" class="section level4">
+<h4>Let’s take a look at the distribution for different regions…</h4>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-9-1.png" width="960" /></p>
+<pre><code>## 
+## Call:
+## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE, data = .)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -65.296 -19.955  -2.694  22.593  72.342 
+## 
+## Coefficients:
+##                          Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)             2.562e+02  5.003e-01 512.165  &lt; 2e-16 ***
+## INSTRUCTION_EXPENDITURE 2.238e-07  5.312e-08   4.214 2.57e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 24.45 on 3910 degrees of freedom
+##   (1613 observations deleted due to missingness)
+## Multiple R-squared:  0.004521,   Adjusted R-squared:  0.004266 
+## F-statistic: 17.76 on 1 and 3910 DF,  p-value: 2.566e-05
+## 
+## Call:
+## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE, data = .)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -64.992 -20.308  -7.211  23.699  61.169 
+## 
+## Coefficients:
+##                          Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)             2.377e+02  4.876e-01 487.517  &lt; 2e-16 ***
+## INSTRUCTION_EXPENDITURE 2.098e-07  5.250e-08   3.995 6.57e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 24.59 on 4147 degrees of freedom
+##   (1490 observations deleted due to missingness)
+## Multiple R-squared:  0.003835,   Adjusted R-squared:  0.003594 
+## F-statistic: 15.96 on 1 and 4147 DF,  p-value: 6.57e-05</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE + Test, data = .)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -65.336 -20.120  -5.192  23.161  72.410 
+## 
+## Coefficients:
+##                           Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)              2.563e+02  4.493e-01 570.344  &lt; 2e-16 ***
+## INSTRUCTION_EXPENDITURE  2.167e-07  3.734e-08   5.803 6.77e-09 ***
+## TestREADING             -1.859e+01  5.466e-01 -34.017  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 24.53 on 8058 degrees of freedom
+##   (3103 observations deleted due to missingness)
+## Multiple R-squared:  0.129,  Adjusted R-squared:  0.1288 
+## F-statistic: 596.8 on 2 and 8058 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE + Test + 
+##     Year, data = .)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -68.88 -19.62  -5.65  23.31  68.81 
+## 
+## Coefficients:
+##                           Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)             -1.195e+03  8.839e+01 -13.525  &lt; 2e-16 ***
+## INSTRUCTION_EXPENDITURE  1.117e-07  3.728e-08   2.996  0.00275 ** 
+## TestREADING             -1.830e+01  5.380e-01 -34.016  &lt; 2e-16 ***
+## Year                     7.230e-01  4.402e-02  16.424  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 24.13 on 8057 degrees of freedom
+##   (3103 observations deleted due to missingness)
+## Multiple R-squared:  0.1572, Adjusted R-squared:  0.1569 
+## F-statistic:   501 on 3 and 8057 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<div id="citations" class="section level3">
+<h3>Citations</h3>
+<ul>
+<li>Putting title at top of grid.arrange output <a href="https://www.tutorialspoint.com/how-to-add-title-at-the-top-of-multi-plots-created-by-using-gridextra-in-r" class="uri">https://www.tutorialspoint.com/how-to-add-title-at-the-top-of-multi-plots-created-by-using-gridextra-in-r</a></li>
+</ul>
+</div>
+</div>

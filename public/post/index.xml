@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on A Hugo website</title>
+    <link>/post/</link>
+    <description>Recent content in Posts on A Hugo website</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 01 Jun 2021 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Predicting Test Scores using Linear Regression</title>
+      <link>/2021/06/01/predicting-test-scores-using-linear-regression/</link>
+      <pubDate>Tue, 01 Jun 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/06/01/predicting-test-scores-using-linear-regression/</guid>
+      <description>Getting the DataWe recommend using the read_xlsx() and read_csv() functions for reading in the appropriate data. You can find the schools dataset here and the regionizer dataset here. If you just want the cleaned dataset (schools_cleaned), you can find that here.
+Exploring Our Cleaned DataSome thoughts beforehand:Since we are trying to predict test scores, that will be our response variableWe are performing a linear regression, so we should try and explore variables as if they’d be part of a linear modelWhen grouping, we need to pay attention to the number of NAs that exist for certain groupsHow Reading and Math Scores DifferWe can see some variability in Region with the green boxplot mostly but Race showcases math and reading score distributions that look much different between different Races.</description>
+    </item>
+    
+  </channel>
+</rss>
