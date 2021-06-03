@@ -1,0 +1,278 @@
+---
+title: "Final Project"
+author: "Benjamin Glossner"
+date: "5/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(readxl)
+library(mapproj)
+library(maps)
+library(ggridges)
+```
+
+```{r}
+map_theme <- (
+  theme_bw() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank())
+)
+```
+
+
+```{r include=FALSE}
+schools <- read_xlsx(here::here("US_schools_data.xlsx"))
+regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
+```
+
+```{r}
+schools_cleaned <- schools %>%
+  select(
+    PRIMARY_KEY, TOTAL_EXPENDITURE, INSTRUCTION_EXPENDITURE,
+    SUPPORT_SERVICES_EXPENDITURE, OTHER_EXPENDITURE, CAPITAL_OUTLAY_EXPENDITURE,
+    ends_with("READING"), ends_with("MATHEMATICS")
+  ) %>%
+  mutate(
+    Year = as.numeric(substr(PRIMARY_KEY, 1, 4)),
+    State = substring(PRIMARY_KEY, 6),
+    Decade = Year %/% 10 * 10
+  )
+```
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  pivot_longer(
+    c(ends_with("READING"),  ends_with("MATHEMATICS")),
+    names_to = c("Grade", "Race", "Sex", "Test"),
+    names_sep = "_",
+    values_to = "Test Score"
+  )
+
+regionizer <- regionizer %>%
+  mutate(
+    State = str_to_lower(State)
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    State = str_replace_all(str_to_lower(State), "_", " ")
+  ) %>%
+  left_join(regionizer, by = "State") %>%
+  select(-PRIMARY_KEY)
+
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    Grade = str_extract(Grade, "[0-9]$"),
+    Sex = str_replace(Sex, "A", "all"),
+    across(c("State", "Grade", "Race", "Sex", "Test", "Region", "Division"), as.factor)
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  filter(!is.na(Region))
+```
+
+```{r}
+temp_school <- schools_cleaned %>%
+  select(INSTRUCTION_EXPENDITURE, `Test Score`, Region, State) %>%
+  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`)
+
+# summary(temp_school)
+# 
+# states <- map_data("state")
+# map.df <- merge(states,
+#                 temp_school,
+#                 by.x = "State",
+#                 by.y = "Region",
+#                 all.x=T)
+# map.df <- map.df[order(map.df$order),]
+# 
+# map.df %>%
+#   ggplot(mapping = aes(x=long,y=lat,group=group)) +
+#   geom_polygon(aes(fill=REGION)) +
+#   geom_path() +
+#   coord_map() +
+#   labs(title = "Labeled Regions in the Continental US") +
+#   map_theme
+
+schools_cleaned %>%
+  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
+  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`, color= Sex))+
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ Region)
+
+schools_cleaned %>%
+  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
+  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ Sex)
+
+schools_cleaned %>%
+  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
+  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ Race)
+```
+
+
+```{r}
+schools_cleaned %>%
+  filter(is.na(Region)) %>%
+  distinct(State)
+```
+
+
+```{r}
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Test)) +
+  geom_boxplot()
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Region)) +
+  geom_boxplot(position = "dodge")
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Sex)) +
+  geom_boxplot(position = "dodge")
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
+  geom_boxplot(position = "dodge")
+```
+
+```{r error=FALSE}
+library(showtext)
+font_add_google("Roboto", "Roboto")
+showtext_auto() 
+```
+
+```{r}
+# Changing grid and background: https://felixfan.github.io/ggplot2-remove-grid-background-margin/
+# 
+# Changing font: https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
+# 
+# Changing text size: https://statisticsglobe.com/change-font-size-of-ggplot2-plot-in-r-axis-text-main-title-legend
+#
+# Changing title position: https://www.datanovia.com/en/blog/ggplot-title-subtitle-and-caption/
+# 
+# Changing order of legend: https://www.datanovia.com/en/blog/ggplot-legend-title-position-and-labels/
+
+schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
+  geom_boxplot() + 
+  labs(title = "Test Scores By Race", y = "Test Type") +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        text = element_text(family = "Roboto"),
+        axis.title = element_text(size = 16),
+        plot.title = element_text(size = 20, hjust = 0.5),
+        legend.title = element_text(size = 12)
+  ) +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+```{r}
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(Region ~ Decade, ncol = 3)
+
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(Sex ~ Decade)
+
+
+# NAs for many of the Races for 1990s and 2000s
+schools_cleaned %>%
+  mutate(
+    Decade = (as.numeric(Year) %/% 10) * 10
+  ) %>%
+  drop_na(`Test Score`) %>%
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
+  geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm") +
+  facet_wrap(Race ~ Decade)
+```
+
+```{r}
+math_model <- schools_cleaned %>%
+  filter(str_to_lower(Test) == "mathematics") %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE, data=.)
+
+reading_model <- schools_cleaned %>%
+  filter(str_to_lower(Test) == "reading") %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE, data=.)
+```
+
+```{r}
+summary(math_model)
+summary(reading_model)
+```
+
+```{r}
+schools_cleaned <- within(schools_cleaned, Test <- relevel(Test, ref="MATHEMATICS"))
+
+test_model <- schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test, data=.)
+
+summary(test_model)
+```
+
+```{r}
+test_model <- schools_cleaned %>%
+  drop_na(`Test Score`) %>%
+  lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test + Year, data=.)
+
+summary(test_model)
+```
+
+```{r}
+library(olsrr)
+
+temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
+
+model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race + Division + Grade, data=temp)
+
+# We used these functions for STAT 334 (Applied Linear Models) to do variable selection
+# all_sub1 <- ols_step_all_possible(model1)
+best.sub1 <- ols_step_best_subset(model1)
+```
+
