@@ -16,6 +16,7 @@ library(readxl)
 library(broom)
 library(ggridges)
 library(olsrr)
+library(ggtext)
 ```
 
 ```{r include=FALSE}
@@ -39,9 +40,7 @@ schools_cleaned <- schools %>%
     State = substring(PRIMARY_KEY, 6),
     Decade = Year %/% 10 * 10
   )
-```
 
-```{r}
 schools_cleaned <- schools_cleaned %>%
   pivot_longer(
     c(ends_with("READING"),  ends_with("MATHEMATICS")),
@@ -71,34 +70,39 @@ schools_cleaned <- schools_cleaned %>%
 
 schools_cleaned <- schools_cleaned %>%
   filter(!is.na(Region))
+
 ```
+
+```{r}
+
+# levels(schools_cleaned$Race) <- c("All", 
+#                                   "American Indian/Alaskan", 
+#                                   "Asian",
+#                                   "Black", 
+#                                   "Hispanic/Latino", 
+#                                   "Hawaiian/Pacific Islander",
+#                                   "Two or More Races", 
+#                                   "White"
+#                                   )
+# 
+# schools_cleaned$Race <- droplevels(schools_cleaned$Race, exclude = "All")
+
+
+```
+
 
 ## Data Visualization
 
 First, we have our plot of the relationship between instructional expenditures and testing scores, and how they differ when we factor in region. We have also included plots displaying the relationship with the Sex and Race variables on top of the plot to show how those variables affect Test Score as well.
-```{r}
+
+
+```{r, fig.width = 10, fig.height = 10}
+
 schools_cleaned %>%
   drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
-  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`)) +
-  geom_jitter(alpha=0.1) +
+  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
   geom_smooth(method = "lm") +
   facet_wrap(~ Region)
-
-# Removed the coloring by region since I didn't think it was necessary when we facet by sex in the next plot.
-
-schools_cleaned %>%
-  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
-  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
-  geom_jitter(alpha=0.1) +
-  geom_smooth(method = "lm") +
-  facet_wrap(~ Sex)
-
-schools_cleaned %>%
-  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
-  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
-  geom_jitter(alpha=0.1) +
-  geom_smooth(method = "lm") +
-  facet_wrap(~ Race)
 ```
 
 Looking at the overall distributions of first set of plots, we can see that the Midwest and the Northeast both are relatively flat, and don't have much alteration in test score based off instruction expenditure. In the South, there is a slight increase in test scores when instruction expenditure is increased, showing a positive correlation betweent those variables. In the South on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possible indicate something having to do with other variables in the West, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that none of these plots are very strong by any means, and only imply a slight correlation that might not be included in our final model.
@@ -109,100 +113,79 @@ Lastly, the plots with race overlaid in the relationship between test score and 
 
 Next, we have te plots that are for the relationship between test score and test type, where we will include the variables of Region, Sex, and Race and how they impact the relationship.
 
-```{r}
-schools_cleaned %>%
-  drop_na(`Test Score`) %>%
-  ggplot(aes(x = `Test Score`, y = Test, fill = Region)) +
-  geom_boxplot(position = "dodge")
+```{r echo=FALSE, fig.width = 10, fig.height = 10}
+
+# region_coloring <- c(
+#   Northeast = "#8414eb",
+#   South = "#7BAB14",
+#   Midwest = "#13D3EC",
+#   West = "#EC2C13"
+# )
 
 schools_cleaned %>%
-  drop_na(`Test Score`) %>%
-  ggplot(aes(x = `Test Score`, y = Test, fill = Sex)) +
-  geom_boxplot(position = "dodge")
-
-schools_cleaned %>%
-  drop_na(`Test Score`) %>%
+  drop_na(`Test Score`, Race) %>%
+  mutate(
+    Region = fct_relevel(Region, "West", "Midwest", "South", "Northeast"),
+    Test = case_when(
+      Test == "READING" ~ "Reading Scores",
+      TRUE ~ "Math Scores"
+    )
+  ) %>%
   ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
-  geom_boxplot(position = "dodge")
+  geom_boxplot(width = 0.6,
+               position = position_dodge(width = 0.7), alpha = 0.3) +
+  geom_jitter(aes(color = Race), alpha = 0.25, position = position_jitterdodge()) +
+  labs(title = "**_Reading and Math Test Scores across Regions_**", y = "", x = "") +
+  geom_text(aes(x = 140, label = Test, family = "mono", fontface = "bold.italic"),
+           stat = "summary",
+           size = 6.5,
+           nudge_y = 0.5,
+           check_overlap = TRUE,
+           vjust = "inward",
+           hjust="inward") +
+  geom_text(aes(x = 160, y = Test, label = Race, color = Race, family = "mono"),
+           stat = "summary",
+           size = 5,
+           position = position_dodge(width = 0.7)) +
+  #scale_fill_manual(values = region_coloring) +
+  #scale_color_manual(values = region_coloring) +
+  scale_x_continuous(breaks = c(180, 220, 260, 300), expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0.6, 0)) +
+  theme_bw() +
+  theme(axis.text = element_text(size=13),
+        axis.ticks.y=element_blank(),
+        axis.text.y = element_blank(),
+        plot.title.position = "plot",
+        panel.grid = element_blank(),
+        legend.position = "none",
+        plot.title = element_markdown(lineheight = 1.5, size = 24, family = "serif"),
+        panel.border = element_blank())
 ```
 
 In these plots, we will be looking at the relationship between test score and the specific test type. We will also overlay the region, sex, and race variables again so that we can analyze how those factor in to the relationship. In the plot for region first, we can see that the median of reading test scores is lower than those for mathematics (about 225 vs. about 250), indicating that the students in this study excel much better in mathematics. When looking how region influences this relationship, the regions don't differ too much from each other, indicating that the median test scores aren't that much different across regions. For the graph with the Sex variable included, we can see that when it comes to the reading test, the males in the study have lower test scores than the females, while for the mathematics test the male and female test scores are not much different from each other. Lastly, looking at the plot including the Race variable, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the WH and AS races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public vs privte schooling. For this reason, race is definitely a variable that will provide interesting insight to our model.
 
-```{r error=FALSE}
-# library(showtext)
-# font_add_google("Roboto", "Roboto")
-# showtext_auto() 
-```
-
-```{r}
-# Changing grid and background: https://felixfan.github.io/ggplot2-remove-grid-background-margin/
-# 
-# Changing font: https://stackoverflow.com/questions/34522732/changing-fonts-in-ggplot2
-# 
-# Changing text size: https://statisticsglobe.com/change-font-size-of-ggplot2-plot-in-r-axis-text-main-title-legend
-#
-# Changing title position: https://www.datanovia.com/en/blog/ggplot-title-subtitle-and-caption/
-# 
-# Changing order of legend: https://www.datanovia.com/en/blog/ggplot-legend-title-position-and-labels/
-# 
-# schools_cleaned %>%
-#   drop_na(`Test Score`) %>%
-#   ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
-#   geom_boxplot() + 
-#   labs(title = "Test Scores By Race", y = "Test Type") +
-#   theme_bw() +
-#   theme(panel.border = element_blank(),
-#         panel.grid.minor = element_blank(),
-#         axis.line = element_line(colour = "black"),
-#         text = element_text(family = "Roboto"),
-#         axis.title = element_text(size = 16),
-#         plot.title = element_text(size = 20, hjust = 0.5),
-#         legend.title = element_text(size = 12)
-#   ) +
-#   guides(fill = guide_legend(reverse = TRUE))
-```
-
 Lastly, we will be plotting the relationship between test scores and expenditures and how that relationship differs over time. Once again we are going to be including the Region, Sex, and Race variables to see how the influence the relationship.
 
-```{r}
+```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
   mutate(
     Decade = (as.numeric(Year) %/% 10) * 10
   ) %>%
   drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_jitter(alpha=0.1) +
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color=Race)) +
+  #geom_jitter(alpha=0.1) +
   geom_smooth(method = "lm") +
-  facet_wrap(Region ~ Decade, ncol = 3)
-
-schools_cleaned %>%
-  mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
-  ) %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_jitter(alpha=0.1) +
-  geom_smooth(method = "lm") +
-  facet_wrap(Sex ~ Decade)
-
+  facet_wrap(Region ~ Decade, ncol = 3) 
 
 # NAs for many of the Races for 1990s and 2000s
-schools_cleaned %>%
-  mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
-  ) %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_jitter(alpha=0.1) +
-  geom_smooth(method = "lm") +
-  facet_wrap(Race ~ Decade)
 ```
 
 For the first plot with Region, we can see some interesting changes overtime and how it compares across regions. For the Midwest it is interesting to see that there is a negative relationship between the variables in the 90s, and throughout the next two decades it improves to being a flat/slightly positive relationship between the variables. This could have something to do with an improvement in technology and better facilities for learning, which would improve test scores. Not much changes in the Northeast, but we do see changes within the South and the West, where the South starts off in a positive relationship and it increases even more, and the West is like the Midwest where it starts negative and improves to become flat over time. Overall, there are many different factors that could be influencing these changes over time, one being technological advances.
 
+
 ## Linear Regression
 
-Here we went ahead and feet two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.
+Here we went ahead and fitt two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.
 
 ```{r}
 math_model <- schools_cleaned %>%
@@ -225,14 +208,13 @@ After running both models, there are a number of different summary statistics th
 
 Now analyzing the reading model, we can see that the Adjusted R-Squared is 0.003594 which is also extremely small and worse than the mathematics model. To interpret this, we would say that 0.3594% of the variation in Test Score can be explained by our model. The p-value for the reading model is still small but larger than the mathematics model at 6.57e-05. We would still conclude that this model is statistically significant and reject the null hypothesis, and conclude that instruction expenditure is an accurate predictor of test score for the Mathematics test.
 
-# Model Comparison
+### Model Comparison
 
 After analyzing both of the models, we are able to see that the mathematics test accounts for a larger proportion of the variability in test score, compared to the reading test. We found Adjusted R-Squared values for the math model and reading model of 0.004266 and 0.003594, respectively. This difference is not that substantial since both of these numbers are quite small, but we do see that the math model has a higher Adjusted R-Squared, indicating that the math test accounts for the larger proportion in Test Score variability.
 
+### Multiple Linear Regression
 
-# Multiple Linear Regression
-
-## Both Tests
+#### Both Tests
 ```{r}
 schools_cleaned <- within(schools_cleaned, Test <- relevel(Test, ref="MATHEMATICS"))
 
@@ -256,13 +238,15 @@ summary(test_model)
 ```{r}
 temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
 
-model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race + Division + Grade, data=temp)
+model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race  + Grade, data=temp)
 
 # We used these functions for STAT 334 (Applied Linear Models) to do variable selection
 # all_sub1 <- ols_step_all_possible(model1)
 best.sub1 <- ols_step_best_subset(model1)
 ```
-```{r}
+
+
+```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
   ggplot(aes(x = `Test Score`, y = Test, fill = Grade)) +
   geom_density_ridges(alpha = 0.5) +
@@ -329,4 +313,20 @@ sim_r_sq <- sims %>%
   map( ~lm(`Test Score` ~ .x, data = sims)) %>% 
   map(glance) %>% 
   map_dbl(~.$r.squared)
+
+sim_r_sq <- sim_r_sq[names(sim_r_sq) != "Test Score"]
+
+tibble(sims = sim_r_sq) %>% 
+  ggplot(aes(x = sims)) + 
+  geom_histogram(binwidth = 0.001)
+```
+
+
+```{r}
+
+test <- schools_cleaned %>%
+  lm(`Test Score` ~ Test + Race + Grade, data = .)
+
+summary(test)
+
 ```
