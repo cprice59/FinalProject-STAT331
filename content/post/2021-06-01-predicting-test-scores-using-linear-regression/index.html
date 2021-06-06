@@ -1,14 +1,42 @@
 ---
 title: "Predicting Test Scores using Linear Regression"
 author: "Group 4"
-date: 2021-06-01
+date: 2021-06-03
 categories: ["R"]
 tags: ["R Markdown", "plot", "regression"]
+output:
+  blogdown::html_page:
+    toc: true
 ---
 
 <script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
 
+<div id="TOC">
+<ul>
+<li><a href="#getting-the-data">Getting the Data</a></li>
+<li><a href="#exploring-our-cleaned-data">Exploring Our Cleaned Data</a>
+<ul>
+<li><a href="#some-thoughts-beforehand">Some thoughts beforehand:</a></li>
+<li><a href="#how-reading-and-math-scores-differ">How Reading and Math Scores Differ</a></li>
+<li><a href="#citations">Citations</a></li>
+</ul></li>
+</ul>
+</div>
 
+<!-- <style> -->
+<!--   aside.toc { -->
+<!--     position: sticky; -->
+<!--     left: 0; -->
+<!--     top: 0; -->
+<!--     width: 20vw; -->
+<!--     height: 100%; -->
+<!--   } -->
+<!-- </style> -->
+<!-- <aside class="toc"> -->
+<!--   {{ if .Params.toc }} -->
+<!--   {{ .TableOfContents }} -->
+<!--   {{ end }} -->
+<!-- </aside> -->
 <div id="getting-the-data" class="section level2">
 <h2>Getting the Data</h2>
 <p>We recommend using the <code>read_xlsx()</code> and <code>read_csv()</code> functions for reading in the appropriate data. You can find the <code>schools</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx">here</a> and the <code>regionizer</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv">here</a>. <em>If you just want the cleaned dataset (<code>schools_cleaned</code>), you can find that <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv">here</a></em>.</p>

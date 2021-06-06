@@ -1,0 +1,250 @@
+---
+title: "Cleaning our Test Scores Dataset"
+author: "Group 4"
+date: 2021-06-01
+categories: ["R"]
+tags: ["R Markdown", "cleaning", "data"]
+output:
+  blogdown::html_page:
+    toc: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Setup
+
+## Including Libraries
+
+The `here` library is not needed if you are reading in the content from the web. Otherwise, if you are reading it locally, using the `here` package is suggested. You can learn more about the `here` package [here](https://here.r-lib.org/).
+
+If any of the packages below are not installed, you can run `install.packages(package)` to install it.
+
+```{r}
+library(tidyverse)
+library(here)
+library(readxl)
+```
+
+## Getting the Data
+
+We recommend using the `read_xlsx()` and `read_csv()` functions for reading in the appropriate data. You can find the `schools` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx) and the `regionizer` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv). _If you just want the cleaned dataset (`schools_cleaned`), you can find that [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv)_.
+
+## Reading in Data
+
+We can use the `read_xlsx()` and `read_csv()` as part of the `tidyverse` and `readxl` packages.
+
+```{r}
+schools <- read_xlsx(here::here("US_schools_data.xlsx"))
+regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
+```
+
+## Looking at Data
+
+We can use the `View` function with RStudio to get a nice look of the data. However, here we will just look at the table start for both tables.
+
+#### Schools Dataset
+
+```{r}
+head(schools)
+```
+
+#### Regionizer Dataset
+
+```{r}
+head(regionizer)
+```
+
+
+# Cleaning the Data
+
+We have a lot columns/variables in this dataset! Let's go ahead and remove ones we don't think will be as helpful. We may later refine the number of columns, too.
+
+```{r}
+schools_cleaned <- schools %>%
+  select(
+    PRIMARY_KEY, TOTAL_EXPENDITURE, INSTRUCTION_EXPENDITURE,
+    SUPPORT_SERVICES_EXPENDITURE, OTHER_EXPENDITURE, CAPITAL_OUTLAY_EXPENDITURE,
+    ends_with("READING"), ends_with("MATHEMATICS")
+  )
+```
+
+Here, we have selected all the columns that we think might be relevant. We want all the columns with scores in them, so we can use the `ends_with` function with the test type on it to grab all those columns. The syntax we are using here is provided by `dplyr` with the `select` function, which extracts all wanted columns.
+
+If you are unfamiliar with the piping operator, `%>%`, read up on piping using `dplyr` [here](https://seananderson.ca/2014/09/13/dplyr-intro/). `dpylr` is part of the `tidyverse` package so if you included that library you don't need to include dplyr.
+
+### Splitting the Primary Key
+
+We can see that a `PRIMARY_KEY` column exists that seems to be composed of the Year and State of that observation. It'd be helpful to split that out!
+
+```{r echo=FALSE}
+head(schools$PRIMARY_KEY)
+```
+
+
+For each observation, the year is the first 4 numbers. Then we have an underscore as the 5th character and then the rest is the state. We can extract a string within another by indexes using the `substr` function, which is a vectorized function that accepts a string/vector of strings, a start index and end index and retrieves the inner string starting from start index and ending at end index, inclusively.
+
+*Note*: R is 1-indexed!.
+
+Then we can use `substring` starting at index 6 (after the underscore) to extract the state. We don't specify an end index because we want to extract all after.
+
+The `mutate` function allows us to **add or modify** an existing column.
+ 
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    Year = as.numeric(substr(PRIMARY_KEY, 1, 4)),
+    State = substring(PRIMARY_KEY, 6),
+  )
+```
+
+Let's take a look at the new columns:
+
+```{r echo=FALSE}
+schools_cleaned %>%
+  select(PRIMARY_KEY, Year, State) %>%
+  head()
+```
+
+### Adding a new Decade column
+
+We'll also add a new decade columns for later use here. This can be done by **floor dividing** the year by 10 (so 1990 to 1999) floor divided by 10 is 199. We then just multiply by 10 to get back to the decade.
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    Decade = Year %/% 10 * 10
+  )
+```
+
+```{r echo=FALSE}
+schools_cleaned %>%
+  select(Year, Decade) %>%
+  distinct() %>%
+  head()
+```
+
+
+### Breaking up the Test Scores
+
+It'd be nice if we could see the test scores as its own columns. Currently, the columns ending with READING/MATHEMATICS contain the scores. They also tell us the grade, race, and sex of that group's average test score. This isn't great. Those should each be their own columns so we can easily do manipulations on them!
+
+We can split many columns into multiple new observations with less columns by using the `pivot_longer` function, which will make the end table *longer*. Let's take a look at the column `G04_A_M_MATHEMATICS`. We can break this down into `GRADE_RACE_SEX_TEST`. We will provide `pivot_longer` with:
+- all the relevant columns we want to split. This would be all columns ending with a Test type in the name
+- `names_to`: column names for each variable we split into (Grade, Race, Sex, Test)
+- `names_sep`: string for how to split. In our case, an underscore
+- `values_to`: name of column that will have the value of the column you split. We'll name this `Test Score`
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  pivot_longer(
+    c(ends_with("READING"),  ends_with("MATHEMATICS")),
+    names_to = c("Grade", "Race", "Sex", "Test"),
+    names_sep = "_",
+    values_to = "Test Score"
+  )
+```
+
+```{r echo=FALSE}
+schools_cleaned %>%
+  select(Year, State, Grade, Race, Sex, Test, `Test Score`) %>%
+  head()
+```
+
+### Adding Regions
+
+We now want to add regions. This can be done by joining our `regionizer` dataset with our cleaned schools dataset. To get it ready, we lowercase the states so they will match properly. We also still have underscores between the spaces in our state, which we can fix by replacing all underscores in state with a space using `str_replace_all`. Then we just join the two datasets where the States are equal.
+
+```{r}
+regionizer <- regionizer %>%
+  mutate(
+    State = str_to_lower(State)
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    State = str_replace_all(str_to_lower(State), "_", " ")
+  ) %>%
+  left_join(regionizer, by = "State") %>%
+  select(-PRIMARY_KEY) # Get rid of PRIMARY_KEY at this point
+```
+
+```{r echo=FALSE}
+schools_cleaned %>%
+  select(State, Region, Division) %>%
+  distinct() %>%
+  head()
+```
+
+### Cleaning up the Grade/Sex
+
+You'll notice from above that our grade still looks like `G04` for 4th grade. We probably want these to be actual numbers, though! We can convert these to numbers by just extracting the last digit. A fancy way to do this is with regular expressions. The regex `[0-9]$` will match any number between 0 and 9 that exists right before the end of the line (denoted with the `$`).
+
+For Sex, we will clean up a bit by converting the `A` values into `all` so it's more explicit what that value means.
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    Grade = str_extract(Grade, "[0-9]$"),
+    Sex = str_replace(Sex, "A", "all"),
+  )
+```
+
+```{r}
+schools_cleaned %>%
+  select(Grade, Sex) %>%
+  distinct()
+```
+
+### Converting Column Datatypes and removing NAs
+
+We want to change our string variables to something in R called **_factors_**, which are an assigned numerical representation of a string. We don't always want this for strings, but for categorical variables it can be very helpful. Let's see what Sex currently is for instance:
+
+```{r}
+str(schools_cleaned$Race[1:10])
+```
+
+
+In our case we have lots of categorical variables we want to convert. We can convert a variable using the `as.factor` function which takes a vector of strings and turns the values into factors.
+
+A way to do this quickly for columns `across` the table is with the `across` function, which applies a function across a number of columns.
+
+*Note*: This must be done within a `mutate`.
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    across(c("State", "Grade", "Race", "Sex", "Test", "Region", "Division"), as.factor)
+  )
+```
+
+Let's see the new output!
+
+```{r}
+str(schools_cleaned$Race[1:10])
+```
+
+### Removing NAs
+
+Finally, we want to remove the places where our Regions are NA. There are a few places that don't match a given Region.
+
+```{r}
+schools_cleaned %>%
+  filter(is.na(Region)) %>%
+  select(State, Region) %>%
+  distinct()
+```
+
+
+```{r}
+schools_cleaned <- schools_cleaned %>%
+  filter(!is.na(Region))
+```
+
+
+```{r eval=FALSE, include=FALSE}
+# Run this to save CSV file for reference on website
+write_csv(schools_cleaned, here::here("us_schools_cleaned.csv"))
+```

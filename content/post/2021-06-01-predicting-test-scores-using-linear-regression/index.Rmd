@@ -1,9 +1,12 @@
 ---
 title: "Predicting Test Scores using Linear Regression"
 author: "Group 4"
-date: 2021-06-01
+date: 2021-06-03
 categories: ["R"]
 tags: ["R Markdown", "plot", "regression"]
+output:
+  blogdown::html_page:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -20,72 +23,50 @@ library(gridExtra)
 library(grid)
 ```
 
+<!-- <style> -->
+<!--   aside.toc { -->
+<!--     position: sticky; -->
+<!--     left: 0; -->
+<!--     top: 0; -->
+<!--     width: 20vw; -->
+<!--     height: 100%; -->
+<!--   } -->
+<!-- </style> -->
+
+<!-- <aside class="toc"> -->
+<!--   {{ if .Params.toc }} -->
+<!--   {{ .TableOfContents }} -->
+<!--   {{ end }} -->
+<!-- </aside> -->
+
 ## Getting the Data
 
 We recommend using the `read_xlsx()` and `read_csv()` functions for reading in the appropriate data. You can find the `schools` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx) and the `regionizer` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv). _If you just want the cleaned dataset (`schools_cleaned`), you can find that [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv)_.
 
 ```{r include=FALSE}
-schools <- read_xlsx(here::here("US_schools_data.xlsx"))
-regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
-```
-
-```{r}
-schools_cleaned <- schools %>%
-  select(
-    PRIMARY_KEY, TOTAL_EXPENDITURE, INSTRUCTION_EXPENDITURE,
-    SUPPORT_SERVICES_EXPENDITURE, OTHER_EXPENDITURE, CAPITAL_OUTLAY_EXPENDITURE,
-    ends_with("READING"), ends_with("MATHEMATICS")
-  ) %>%
-  mutate(
-    Year = as.numeric(substr(PRIMARY_KEY, 1, 4)),
-    State = substring(PRIMARY_KEY, 6),
-    Decade = Year %/% 10 * 10
-  )
-```
-
-```{r}
-schools_cleaned <- schools_cleaned %>%
-  pivot_longer(
-    c(ends_with("READING"),  ends_with("MATHEMATICS")),
-    names_to = c("Grade", "Race", "Sex", "Test"),
-    names_sep = "_",
-    values_to = "Test Score"
-  )
-
-regionizer <- regionizer %>%
-  mutate(
-    State = str_to_lower(State)
-  )
-
-schools_cleaned <- schools_cleaned %>%
-  mutate(
-    State = str_replace_all(str_to_lower(State), "_", " ")
-  ) %>%
-  left_join(regionizer, by = "State") %>%
-  select(-PRIMARY_KEY)
-
-schools_cleaned <- schools_cleaned %>%
-  mutate(
-    Grade = str_extract(Grade, "[0-9]$"),
-    Sex = str_replace(Sex, "A", "all"),
-    across(c("State", "Grade", "Race", "Sex", "Test", "Region", "Division"), as.factor)
-  )
-
-schools_cleaned <- schools_cleaned %>%
-  filter(!is.na(Region))
-```
-
-```{r eval=FALSE, include=FALSE}
-# Run this to save CSV file for reference on website
-write_csv(schools_cleaned, here::here("us_schools_cleaned.csv"))
+schools_cleaned <- read_csv(here::here("us_schools_cleaned.csv"),
+                            col_types = cols(
+                              TOTAL_EXPENDITURE = col_double(),
+                              INSTRUCTION_EXPENDITURE = col_double(),
+                              SUPPORT_SERVICES_EXPENDITURE = col_double(),
+                              OTHER_EXPENDITURE = col_double(),
+                              CAPITAL_OUTLAY_EXPENDITURE = col_double(),
+                              Year = col_double(),
+                              State = col_factor(NULL),
+                              Decade = col_double(),
+                              Grade = col_factor(NULL),
+                              Race = col_factor(NULL),
+                              Sex = col_factor(NULL),
+                              Test = col_factor(NULL),
+                              `Test Score` = col_double(),
+                              `State Code` = col_factor(NULL),
+                              Region = col_character(),
+                              Division = col_factor(NULL)
+                            ))
 ```
 
 
 ```{r include=FALSE, eval=FALSE}
-temp_school <- schools_cleaned %>%
-  select(INSTRUCTION_EXPENDITURE, `Test Score`, Region, State) %>%
-  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`)
-
 # summary(temp_school)
 # 
 # states <- map_data("state")
@@ -103,12 +84,6 @@ temp_school <- schools_cleaned %>%
 #   coord_map() +
 #   labs(title = "Labeled Regions in the Continental US") +
 #   map_theme
-
-schools_cleaned_f %>%
-  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
-  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`)) +
-  geom_smooth() +
-  facet_wrap(~ Region, ncol = 1)
 ```
 
 ```{r include=FALSE, eval=FALSE}
@@ -196,6 +171,7 @@ schools_cleaned %>%
   geom_boxplot(width = 0.6,
                position = position_dodge(width = 0.7)) +
   geom_jitter(aes(color = Region), alpha = 0.1, position = position_jitterdodge()) +
+  # geom_density_ridges() +
   labs(title = "**_Reading and Math Test Scores across Regions_**", y = "", x = "") +
   geom_text(aes(x = 140, label = Test, family = "mono", fontface = "bold.italic"),
            stat = "summary",
