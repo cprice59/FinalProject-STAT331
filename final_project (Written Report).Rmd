@@ -105,7 +105,7 @@ schools_cleaned %>%
   facet_wrap(~ Region)
 ```
 
-Looking at the overall distributions of first set of plots, we can see that the Midwest and the Northeast both are relatively flat, and don't have much alteration in test score based off instruction expenditure. In the South, there is a slight increase in test scores when instruction expenditure is increased, showing a positive correlation betweent those variables. In the South on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possible indicate something having to do with other variables in the West, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that none of these plots are very strong by any means, and only imply a slight correlation that might not be included in our final model.
+Looking at the overall distributions of first set of plots, we can see that the Northeast is are relatively flat, and doesn't have much alteration in test score based off instruction expenditure. The Midwest does see a slight increase in Test Score as instruction expenditure increases, but it is not by a larger amount. In the South, there is the best increase in test scores among all regions when instruction expenditure is increased, showing a positive correlation between those variables. In the West on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possible indicate something having to do with other factors in the West, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the South has the strongest relationship among all regions although.
 
 Taking a closer look at the second set of graphs, we can see that for the "all" sex category there is decent increase in test score with an increase in instruction expenditure. Although this distribution isn't the strongest, there is some positive correlation between the two variables when sex is factored in. Analyzing male and female individually, there isn't much difference in their correlations between test scores and expenditures. Overall, the sex variable does not appear to be too indicative of a relationship between expenditures and test scores, but it would be interesting to include in the model.
 
@@ -227,6 +227,8 @@ summary(test_model)
 
 After including the new Test variable as an explanatory variable in our model, we can see that this model does account for a larger proportion of variability in Test Score, with an Adjusted R-Squared value of 0.1288, which interpreted means that 12.88% of the variation in Test Score can be explained in our model. This in fact accounts for more variation than the other two models separately.
 
+# Additional Variables
+
 ```{r}
 test_model <- schools_cleaned %>%
   drop_na(`Test Score`) %>%
@@ -234,6 +236,9 @@ test_model <- schools_cleaned %>%
 
 summary(test_model)
 ```
+
+To test to see how other variables improve our overall model, we included the Year variable to see how the Adjusted R-Squared would change with the addition. Running this new model, we can see that the Adjusted R-Squared is now 0.1569, which is almost a 3% increase in Adjusted R-Squared from our last model (0.1288). With this increase just by adding the Year variable, we will further explore into how other variables within the data can improve our model even more in the next section.
+
 
 ```{r}
 temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
