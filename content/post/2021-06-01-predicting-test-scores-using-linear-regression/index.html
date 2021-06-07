@@ -7,143 +7,159 @@ tags: ["R Markdown", "plot", "regression"]
 output:
   blogdown::html_page:
     toc: true
+    df_print: paged
 ---
 
 <script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+<link href="{{< blogdown/postref >}}index_files/pagedtable/css/pagedtable.css" rel="stylesheet" />
+<script src="{{< blogdown/postref >}}index_files/pagedtable/js/pagedtable.js"></script>
 
 <div id="TOC">
 <ul>
-<li><a href="#getting-the-data">Getting the Data</a></li>
-<li><a href="#exploring-our-cleaned-data">Exploring Our Cleaned Data</a>
+<li><a href="#introduction">Introduction</a>
 <ul>
-<li><a href="#some-thoughts-beforehand">Some thoughts beforehand:</a></li>
-<li><a href="#how-reading-and-math-scores-differ">How Reading and Math Scores Differ</a></li>
-<li><a href="#citations">Citations</a></li>
+<li><a href="#getting-the-data">Getting the Data</a></li>
 </ul></li>
+<li><a href="#data-visualization">Data Visualization</a></li>
+<li><a href="#linear-regression">Linear Regression</a>
+<ul>
+<li><a href="#results-from-creating-model-of-instructional-expenditures-versus-test-score-of-certain-type">Results from creating model of Instructional Expenditures versus Test Score of certain type</a></li>
+<li><a href="#model-comparison">Model Comparison</a></li>
+<li><a href="#multiple-linear-regression">Multiple Linear Regression</a>
+<ul>
+<li><a href="#both-tests">Both Tests</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#deciding-on-a-model">Deciding on a Model</a>
+<ul>
+<li><a href="#linear-model-selection-steps">Linear Model Selection Steps</a>
+<ul>
+<li><a href="#using-best-subset-method">Using Best Subset Method</a></li>
+<li><a href="#using-all-possible-models-method">Using All Possible Models Method</a></li>
+</ul></li>
+<li><a href="#visualization-of-the-final-model-selected">Visualization of the Final Model Selected</a>
+<ul>
+<li><a href="#final-thoughts-on-model-selected">Final Thoughts on Model Selected</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#predictive-checks-for-the-model">Predictive Checks for the Model</a>
+<ul>
+<li><a href="#visualizing-simulations-from-the-model">Visualizing Simulations from the Model</a></li>
+<li><a href="#generating-multiple-predictive-checks">Generating Multiple Predictive Checks</a></li>
+</ul></li>
+<li><a href="#final-thoughts">Final Thoughts</a></li>
 </ul>
 </div>
 
-<!-- <style> -->
-<!--   aside.toc { -->
-<!--     position: sticky; -->
-<!--     left: 0; -->
-<!--     top: 0; -->
-<!--     width: 20vw; -->
-<!--     height: 100%; -->
-<!--   } -->
-<!-- </style> -->
-<!-- <aside class="toc"> -->
-<!--   {{ if .Params.toc }} -->
-<!--   {{ .TableOfContents }} -->
-<!--   {{ end }} -->
-<!-- </aside> -->
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>The data used for this project is from the Urban Institute’s API which is widely used as an education data explorer. This specific dataset was designed to bring together multiple facets of U.S. education data into one file which includes information related to student’s <span class="math inline">\(race\)</span> and <span class="math inline">\(sex\)</span>. The data is from 1992-2019 for every <span class="math inline">\(state\)</span> and is broken down by students enrolled in schools by school <span class="math inline">\(year\)</span>. This dataset also includes the U.S. Census Bureau’s count for students enrolled in school in each state along with the <span class="math inline">\(\text{total revenue}\)</span> and <span class="math inline">\(\text{total expenditure}\)</span> for each state. The revenue can be viewed on federal, state and local levels as well. The expenditure is divided into instruction, support services, capital outlay and an additional group with other expenditures. Student performances are assessed nationwide in grades 4 and 8 and are displayed in this data with the <span class="math inline">\(\text{average math test scores}\)</span> and <span class="math inline">\(\text{average English test scores}\)</span> for both grades. For purposes of this study, the data is analyzed across <span class="math inline">\(Regions\)</span> in the United States rather than individual states. The purpose of this research is to analyze a linear model to predict the relationship between <span class="math inline">\(\text{Reading Test Scores}\)</span> and <span class="math inline">\(\text{Math Test Scores}\)</span> across <span class="math inline">\(Region\)</span> and <span class="math inline">\(Race\)</span>.</p>
 <div id="getting-the-data" class="section level2">
 <h2>Getting the Data</h2>
 <p>We recommend using the <code>read_xlsx()</code> and <code>read_csv()</code> functions for reading in the appropriate data. You can find the <code>schools</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx">here</a> and the <code>regionizer</code> dataset <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv">here</a>. <em>If you just want the cleaned dataset (<code>schools_cleaned</code>), you can find that <a href="https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv">here</a></em>.</p>
 </div>
-<div id="exploring-our-cleaned-data" class="section level2">
-<h2>Exploring Our Cleaned Data</h2>
-<div id="some-thoughts-beforehand" class="section level3">
-<h3>Some thoughts beforehand:</h3>
-<ul>
-<li><strong>Since we are trying to predict test scores, that will be our <em>response</em> variable</strong></li>
-<li>We are performing a <strong><em>linear regression</em></strong>, so we should try and explore variables as if they’d be part of a linear model</li>
-<li>When grouping, we need to pay attention to the number of NAs that exist for certain groups</li>
-</ul>
 </div>
-<div id="how-reading-and-math-scores-differ" class="section level3">
-<h3>How Reading and Math Scores Differ</h3>
-<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
-<p>We can see some variability in Region with the green boxplot mostly but Race showcases math and reading score distributions that look much different between different Races.</p>
-<div id="lets-take-a-look-at-the-distribution-for-different-regions" class="section level4">
-<h4>Let’s take a look at the distribution for different regions…</h4>
-<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-9-1.png" width="960" /></p>
-<pre><code>## 
-## Call:
-## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE, data = .)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -65.296 -19.955  -2.694  22.593  72.342 
-## 
-## Coefficients:
-##                          Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)             2.562e+02  5.003e-01 512.165  &lt; 2e-16 ***
-## INSTRUCTION_EXPENDITURE 2.238e-07  5.312e-08   4.214 2.57e-05 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## Residual standard error: 24.45 on 3910 degrees of freedom
-##   (1613 observations deleted due to missingness)
-## Multiple R-squared:  0.004521,   Adjusted R-squared:  0.004266 
-## F-statistic: 17.76 on 1 and 3910 DF,  p-value: 2.566e-05
-## 
-## Call:
-## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE, data = .)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -64.992 -20.308  -7.211  23.699  61.169 
-## 
-## Coefficients:
-##                          Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)             2.377e+02  4.876e-01 487.517  &lt; 2e-16 ***
-## INSTRUCTION_EXPENDITURE 2.098e-07  5.250e-08   3.995 6.57e-05 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## Residual standard error: 24.59 on 4147 degrees of freedom
-##   (1490 observations deleted due to missingness)
-## Multiple R-squared:  0.003835,   Adjusted R-squared:  0.003594 
-## F-statistic: 15.96 on 1 and 4147 DF,  p-value: 6.57e-05</code></pre>
-<pre><code>## 
-## Call:
-## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE + Test, data = .)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -65.336 -20.120  -5.192  23.161  72.410 
-## 
-## Coefficients:
-##                           Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)              2.563e+02  4.493e-01 570.344  &lt; 2e-16 ***
-## INSTRUCTION_EXPENDITURE  2.167e-07  3.734e-08   5.803 6.77e-09 ***
-## TestREADING             -1.859e+01  5.466e-01 -34.017  &lt; 2e-16 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## Residual standard error: 24.53 on 8058 degrees of freedom
-##   (3103 observations deleted due to missingness)
-## Multiple R-squared:  0.129,  Adjusted R-squared:  0.1288 
-## F-statistic: 596.8 on 2 and 8058 DF,  p-value: &lt; 2.2e-16</code></pre>
-<pre><code>## 
-## Call:
-## lm(formula = `Test Score` ~ INSTRUCTION_EXPENDITURE + Test + 
-##     Year, data = .)
-## 
-## Residuals:
-##    Min     1Q Median     3Q    Max 
-## -68.88 -19.62  -5.65  23.31  68.81 
-## 
-## Coefficients:
-##                           Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)             -1.195e+03  8.839e+01 -13.525  &lt; 2e-16 ***
-## INSTRUCTION_EXPENDITURE  1.117e-07  3.728e-08   2.996  0.00275 ** 
-## TestREADING             -1.830e+01  5.380e-01 -34.016  &lt; 2e-16 ***
-## Year                     7.230e-01  4.402e-02  16.424  &lt; 2e-16 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## Residual standard error: 24.13 on 8057 degrees of freedom
-##   (3103 observations deleted due to missingness)
-## Multiple R-squared:  0.1572, Adjusted R-squared:  0.1569 
-## F-statistic:   501 on 3 and 8057 DF,  p-value: &lt; 2.2e-16</code></pre>
+<div id="data-visualization" class="section level1">
+<h1>Data Visualization</h1>
+<p>First, we have our plot of the relationship between instructional expenditures and testing scores, and how they differ when we factor in Region.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-4-1.png" width="960" /></p>
+<p>Looking at the overall trend of the above plot, we can see that <span class="math inline">\(Northeast\)</span> stays relatively flat, and doesn’t have much alteration in test score as instruction expenditure increases. The <span class="math inline">\(Midwest\)</span> does see a slight increase in test score as instruction expenditure increases, but it is not by a larger amount. In the <span class="math inline">\(South\)</span>, there is the largest increase in test scores among all regions when instruction expenditure is increased, showing a strong positive correlation between those variables. In the <span class="math inline">\(West\)</span> on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possibly indicate something having to do with other factors in the <span class="math inline">\(West\)</span>, such as school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the <span class="math inline">\(South\)</span> has the strongest relationship among all regions though.</p>
+<p>Regarding the Sex and Race variables being implemented into the plot, we added them and found that they did not add much to it as there was little to no variation between the different levels. Since they just made the plot overall more difficult to interpret, we decided to not include them in this final write up as it wouldn’t provide any useful information to the final model.</p>
+<p>Next, we have the plot of the relationship between test score and test type where we will also include the Race variable to see how it impacts the relationship.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-5-1.png" width="960" /></p>
+<p>Looking at the above plot, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the <span class="math inline">\(White\)</span> and <span class="math inline">\(Asian\)</span> races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public versus private schooling. For this reason, race is definitely a variable that will provide interesting insight to our final model.</p>
+<p>Once again, we decided not to include both the Region and Sex variables as part of the graph, as they were not indicative of any real change between test scores, and we wouldn’t understand much from an interpretation with those.</p>
+<p>Lastly, we will be plotting the relationship between test scores and expenditures and how that relationship differs over time. Once again we are going to be including the Region and Race variables to see how they influence the relationship.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-6-1.png" width="960" /></p>
+<p>As can be seen, Region and Race are once again variables that show reasonable and interesting differences between test score and instruction expenditure over time. Sex wasn’t a variable that we wished to include as it was not useful to us understanding the relationship between test score and expenditure over time. One thing that we want to point out first is that race is not tracked individually until the 2010s, indicating that anytime before then it perhaps wasn’t seen as a variable that brought any value to the relationship. One thing that is interesting about these graphs is that the <span class="math inline">\(Midwest\)</span>, <span class="math inline">\(Northeast\)</span>, and <span class="math inline">\(South\)</span> have all greatly improved upon their test scores overtime, regardless of race. Despite this, the <span class="math inline">\(West\)</span> is seen with a negative relationship between the two variables, which is something to note. We can see that most of the races follow along with the general trend for the specific region, but there are a few races that differ from the others, such as <span class="math inline">\(Native\)</span> in the <span class="math inline">\(South\)</span> and <span class="math inline">\(Pacific Islander\)</span> in the <span class="math inline">\(West\)</span>. This could have to do with fundamental and cultural differences for those races in those specific regions, leaving us with more investigating to do when it comes to specific races.</p>
+</div>
+<div id="linear-regression" class="section level1">
+<h1>Linear Regression</h1>
+<p>Here we went ahead and fit two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.</p>
+<div id="results-from-creating-model-of-instructional-expenditures-versus-test-score-of-certain-type" class="section level3">
+<h3>Results from creating model of Instructional Expenditures versus Test Score of certain type</h3>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Test"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Adjusted R^2"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Inst Exp Term p-value"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Math","2":"0.004266373","3":"2.566206e-05"},{"1":"Reading","2":"0.003594426","3":"6.569745e-05"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>After running both models, there are a number of different summary statistics that we can look at which will help us in understanding the linear models better. Looking first at the linear model for the mathematics test, we will analyze the adjusted R-Squared and the p-value for the model. The adjusted R-Squared for this model is 0.004266 which is not great by any means, and interpreting this it means that 0.4266% of the variation in Test Score can be explained by our model. The p-value for this model is 2.566e-05 which is really small and indicates that our model is statistically significant. With this, we can reject the null hypothesis and conclude that instruction expenditure is an accurate predictor of test score for the Mathematics test.</p>
+<p>Now analyzing the reading model, we can see that the adjusted R-Squared is 0.003594 which is also extremely small and worse than the mathematics model. To interpret this, we would say that 0.3594% of the variation in Test Score can be explained by our model. The p-value for the reading model is still small but larger than the mathematics model at 6.57e-05. We would still conclude that this model is statistically significant and reject the null hypothesis, and conclude that instruction expenditure is an accurate predictor of test score for the Mathematics test.</p>
+</div>
+<div id="model-comparison" class="section level2">
+<h2>Model Comparison</h2>
+<p>After analyzing both of the models, we are able to see that the mathematics test accounts for a larger proportion of the variability in test score, compared to the reading test. We found adjusted R-Squared values for the math model and reading model of 0.004266 and 0.003594, respectively. This difference is not that substantial since both of these numbers are quite small, but we do see that the math model has a higher adjusted R-Squared, indicating that the math test accounts for the larger proportion in Test Score variability.</p>
+</div>
+<div id="multiple-linear-regression" class="section level2">
+<h2>Multiple Linear Regression</h2>
+<div id="both-tests" class="section level3">
+<h3>Both Tests</h3>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Predictors for Test Score"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Adjusted R^2"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"INSTRUCTION_EXPENDITURE & Test","2":"0.1287951"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>After including the new Test variable as an explanatory variable in our model, we can see that this model does account for a larger proportion of variability in Test Score, with an adjusted R-Squared value of 0.1288, which interpreted means that 12.88% of the variation in Test Score can be explained in our model. This in fact accounts for more variation than the other two models separately.</p>
 </div>
 </div>
-<div id="citations" class="section level3">
-<h3>Citations</h3>
-<ul>
-<li>Putting title at top of grid.arrange output <a href="https://www.tutorialspoint.com/how-to-add-title-at-the-top-of-multi-plots-created-by-using-gridextra-in-r" class="uri">https://www.tutorialspoint.com/how-to-add-title-at-the-top-of-multi-plots-created-by-using-gridextra-in-r</a></li>
-</ul>
 </div>
+<div id="deciding-on-a-model" class="section level1">
+<h1>Deciding on a Model</h1>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Predictors for Test Score"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Adjusted R^2"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"INSTRUCTION_EXPENDITURE & Test & Year","2":"0.1569139"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>To test to see how other variables improve our overall model, we included the Year variable to see how the adjusted R-Squared would change with the addition. Running this new model, we can see that the adjusted R-Squared is now 0.1569, which is almost a 3% increase in adjusted R-Squared from our last model (0.1288). With this increase just by adding the Year variable, we will further explore into how other variables within the data can improve our model even more in the next section.</p>
+<div id="linear-model-selection-steps" class="section level2">
+<h2>Linear Model Selection Steps</h2>
+<div id="using-best-subset-method" class="section level3">
+<h3>Using Best Subset Method</h3>
+<p>We chose our model using the Best Subset method. This is done by stepping though each possible predictor if the model only had step <span class="math inline">\(n\)</span> predictors and creating a model using each predictor unused in step <span class="math inline">\(1\)</span> through <span class="math inline">\(n-1\)</span> before and seeing what the new adjusted <span class="math inline">\(R^2\)</span> is with all previous predictors picked in the model and the new predictor we are testing. If predictor that causes the best improvement of adjusted <span class="math inline">\(R^2\)</span> is picked as the new predictor to add to the model if you chose a model with step <span class="math inline">\(n\)</span> predictors.</p>
+<p>This can be visualized in a table that records the new best model at each step and keeps track of its adjusted <span class="math inline">\(R^2\)</span>. For us, it ends up looking like this:</p>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Model Predictors"],"name":[1],"type":["int"],"align":["right"]},{"label":["Predictor Added"],"name":[2],"type":["chr"],"align":["left"]},{"label":["Adjusted R^2"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Predictors"],"name":[4],"type":["chr"],"align":["left"]}],"data":[{"1":"1","2":"Grade","3":"0.6887425","4":"Grade"},{"1":"2","2":"Test","3":"0.7964908","4":"Test Grade"},{"1":"3","2":"Race","3":"0.8968740","4":"Test Race Grade"},{"1":"4","2":"Year","3":"0.9089491","4":"Test Year Race Grade"},{"1":"5","2":"Region","3":"0.9173597","4":"Test Year Region Race Grade"},{"1":"6","2":"INSTRUCTION_EXPENDITURE","3":"0.9196392","4":"INSTRUCTION_EXPENDITURE Test Year Region Race Grade"},{"1":"7","2":"Sex","3":"0.9220407","4":"INSTRUCTION_EXPENDITURE Test Year Region Sex Race Grade"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>We can see that as the number of predictors we add increases, so does our model’s adjusted <span class="math inline">\(R^2\)</span>. However, if we look at how they are increasing, we see the rate of increase after the number of predictors is <span class="math inline">\(3\)</span> is pretty negligible.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-12-1.png" width="960" /></p>
+<p>Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep <span class="math inline">\(Grade\)</span>, <span class="math inline">\(Test\)</span>, and <span class="math inline">\(Race\)</span> as predictors for our model.</p>
+</div>
+<div id="using-all-possible-models-method" class="section level3">
+<h3>Using All Possible Models Method</h3>
+<p>One thing to note here is that we also ran a model selection algorithm that tried creating all possible models by creating all permutations of the predictors. This yielded similar results to the best subset so we used the Best Subset method from then on since that algorithm runs much faster.</p>
+</div>
+</div>
+<div id="visualization-of-the-final-model-selected" class="section level2">
+<h2>Visualization of the Final Model Selected</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-13-1.png" width="960" /></p>
+<p>We can see from this graph that all of our predictors are meaningful. The <code>Test</code> type the children had (reading or mathematics) makes a difference in the overall score. We see that math score distributions have higher test scores than the reading score ones, meaning <code>Test</code> type probably is a good predictor for our model. Children in grade <span class="math inline">\(8\)</span> clearly score higher than children in grade <span class="math inline">\(4\)</span>. This supports our idea that <span class="math inline">\(Grade\)</span> would be a good predictor. Additionally, we see that the scores are different per <span class="math inline">\(Race\)</span>, but it is not as pronounced as it is for <span class="math inline">\(Grade\)</span>. For instance, if we look at <span class="math inline">\(Asian\)</span> scores vs <span class="math inline">\(\text{Pacific Islander}\)</span> scores, there is a shift in the ridges. All of this shows that our linear model predictors make sense to have, as they all in some way help to show differences in test scores.</p>
+<div id="final-thoughts-on-model-selected" class="section level3">
+<h3>Final Thoughts on Model Selected</h3>
+<p>We did drop all test scores that were NA. The reason we did this was because the linear model can’t use them because <span class="math inline">\(\text{Test Score}\)</span> is the response variable for our model. We considered changing the NAs to be the mean for that <span class="math inline">\(\text{Race/Grade/Test}\)</span> but that would give the model a large number of observations that weren’t really tested, as the number of NAs test score observations outnumbered those that were non NAs. Thus we decided just to drop them. We do realize that this may reflect poorly for certain cohorts within our model that don’t have as many observations any more. With more time, we would have explored that and do think it’s important, though.</p>
+</div>
+</div>
+</div>
+<div id="predictive-checks-for-the-model" class="section level1">
+<h1>Predictive Checks for the Model</h1>
+<div id="visualizing-simulations-from-the-model" class="section level2">
+<h2>Visualizing Simulations from the Model</h2>
+<p>Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is known as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values, and then adding normally distributed errors to those values.</p>
+<p>We then compare the response variable distributions of the observed data with the simulated data as follows:</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-14-1.png" width="960" /></p>
+<p>In the plots above, we see that the response variable distribution of the simulated data is not exactly the same as the observed, but it is quite similar. For example, both distributions have a minimum around 150 and maximum of around 350. Also, there appears to be a slight bimodal shape in the observed distribution, which is definitely more defined in the simulated distribution. With these characteristics in mind, we can make an educated guess that both distributions could have come from the same data generating process.</p>
+</div>
+<div id="generating-multiple-predictive-checks" class="section level2">
+<h2>Generating Multiple Predictive Checks</h2>
+<p>Although we compared the distributions of the simulated and observed, we can conduct a more comprehensive test by doing multiple predictive checks. To do so, we first generate 1000 simulated datasets and then regress each with the observed data.</p>
+<p>We then plot the distribution of the R-squared values for each regression as follows:</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-15-1.png" width="960" /></p>
+<p>From the plot above, we see that the R-squared from the regressions are between 0.855 and 0.880, with a median around 0.869. Thus, we conclude that on average, our model does account for 86.9% of the observed variability in the observed Test Scores.</p>
+<p>The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data. All in all, the model accurately describes the relationships that our present in the dataset.</p>
+</div>
+</div>
+<div id="final-thoughts" class="section level1">
+<h1>Final Thoughts</h1>
+<p>With our ending model, we believe that there are some ethical implications to be considered when we were creating this model. Analylzing this data, it is evident that the variables of <span class="math inline">\(Test\)</span> and <span class="math inline">\(Grade\)</span> are probably not as controversial to use in a model, but <span class="math inline">\(Race\)</span> definitely is. So if we were to essentially recreate the model and put it out into the world, we should be more mindful of the <span class="math inline">\(Race\)</span> variable and take into consideration the implications that can come about the data that is shown and the predictions the model would make using <span class="math inline">\(Race\)</span>. If this data were to be published, it could be detrimental to some specific racial groups’ self-image if the data shows that statistically they would score lower than other races on a certain test. Doing this would be much more mindful to society as a whole and allow for the data to be presented in a manner that does not harm others.</p>
 </div>

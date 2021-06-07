@@ -7,172 +7,167 @@ tags: ["R Markdown", "plot", "regression"]
 output:
   blogdown::html_page:
     toc: true
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE)
+knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
 ```{r include=FALSE}
+library(olsrr)
 library(tidyverse)
 library(here)
 library(readxl)
+library(broom)
 library(ggtext)
-library(olsrr)
-library(gridExtra)
-library(grid)
+library(ggridges)
+library(ggtext)
 ```
 
-<!-- <style> -->
-<!--   aside.toc { -->
-<!--     position: sticky; -->
-<!--     left: 0; -->
-<!--     top: 0; -->
-<!--     width: 20vw; -->
-<!--     height: 100%; -->
-<!--   } -->
-<!-- </style> -->
+# Introduction
 
-<!-- <aside class="toc"> -->
-<!--   {{ if .Params.toc }} -->
-<!--   {{ .TableOfContents }} -->
-<!--   {{ end }} -->
-<!-- </aside> -->
+The data used for this project is from the Urban Institute’s API which is widely used as an education data explorer. This specific dataset was designed to bring together multiple facets of U.S. education data into one file which includes information related to student’s $race$ and $sex$. The data is from 1992-2019 for every $state$ and is broken down by students enrolled in schools by school $year$. This dataset also includes the U.S. Census Bureau’s count for students enrolled in school  in each state along with the $\text{total revenue}$ and $\text{total expenditure}$ for each state. The revenue can be viewed on federal, state and local levels as well. The expenditure is divided into instruction, support services, capital outlay and an additional group with other expenditures. Student performances are assessed nationwide in grades 4 and 8 and are displayed in this data with the $\text{average math test scores}$ and $\text{average English test scores}$ for both grades. For purposes of this study, the data is analyzed across $Regions$ in the United States rather than individual states. The purpose of this research is to analyze a linear model to predict the relationship between $\text{Reading Test Scores}$ and $\text{Math Test Scores}$ across $Region$ and $Race$.
 
 ## Getting the Data
 
 We recommend using the `read_xlsx()` and `read_csv()` functions for reading in the appropriate data. You can find the `schools` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/US_schools_data.xlsx) and the `regionizer` dataset [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us%20census%20bureau%20regions%20and%20divisions.csv). _If you just want the cleaned dataset (`schools_cleaned`), you can find that [here](https://github.com/cprice59/FinalProject-STAT331/blob/main/us_schools_cleaned.csv)_.
 
-```{r include=FALSE}
-schools_cleaned <- read_csv(here::here("us_schools_cleaned.csv"),
-                            col_types = cols(
-                              TOTAL_EXPENDITURE = col_double(),
-                              INSTRUCTION_EXPENDITURE = col_double(),
-                              SUPPORT_SERVICES_EXPENDITURE = col_double(),
-                              OTHER_EXPENDITURE = col_double(),
-                              CAPITAL_OUTLAY_EXPENDITURE = col_double(),
-                              Year = col_double(),
-                              State = col_factor(NULL),
-                              Decade = col_double(),
-                              Grade = col_factor(NULL),
-                              Race = col_factor(NULL),
-                              Sex = col_factor(NULL),
-                              Test = col_factor(NULL),
-                              `Test Score` = col_double(),
-                              `State Code` = col_factor(NULL),
-                              Region = col_character(),
-                              Division = col_factor(NULL)
-                            ))
-```
-
-
-```{r include=FALSE, eval=FALSE}
-# summary(temp_school)
-# 
-# states <- map_data("state")
-# map.df <- merge(states,
-#                 temp_school,
-#                 by.x = "State",
-#                 by.y = "Region",
-#                 all.x=T)
-# map.df <- map.df[order(map.df$order),]
-# 
-# map.df %>%
-#   ggplot(mapping = aes(x=long,y=lat,group=group)) +
-#   geom_polygon(aes(fill=REGION)) +
-#   geom_path() +
-#   coord_map() +
-#   labs(title = "Labeled Regions in the Continental US") +
-#   map_theme
-```
-
-```{r include=FALSE, eval=FALSE}
-schools_cleaned %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color = Region)) +
-  geom_smooth()
-
-schools_cleaned %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_point() +
-  facet_wrap(~ Race)
-```
-
-## Exploring Our Cleaned Data
-
-### Some thoughts beforehand:
-- **Since we are trying to predict test scores, that will be our _response_ variable**
-- We are performing a **_linear regression_**, so we should try and explore variables as if they'd be part of a linear model
-- When grouping, we need to pay attention to the number of NAs that exist for certain groups
-
-### How Reading and Math Scores Differ
-
-```{r echo=FALSE}
-for_graphs <- schools_cleaned %>%
-  drop_na(`Test Score`) %>%
-  mutate(
-    Test = case_when(
-      Test == "READING" ~ "Reading Scores",
-      TRUE ~ "Math Scores"
-    )
-  )
-
-get_boxplots <- function(col) {
-  plot_with_col_fill <- for_graphs %>%
-    ggplot(aes(x = `Test Score`, y = Test, fill = get(col))) +
-    geom_boxplot(width = 0.6,
-                 position = position_dodge(width = 0.7)) +
-    labs(title = col) +
-    geom_text(aes(label = Test, family = "mono", fontface = "bold.italic"),
-           stat = "summary",
-           size = 3,
-           nudge_y = 0.5,
-           check_overlap = TRUE) +
-    theme(
-      legend.position = "none",
-      axis.title = element_blank(),
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      panel.grid = element_blank()
-    )
-  return(plot_with_col_fill)
-}
-
-region <- get_boxplots("Region")
-sex <- get_boxplots("Sex")
-race <- get_boxplots("Race")
-
-grid.arrange(region, sex, race, ncol = 3, top=textGrob("Distribution of Reading Scores and Math Scores for Region, Sex, and Race"))
-```
-
-We can see some variability in Region with the green boxplot mostly but Race showcases math and reading score distributions that look much different between different Races.
-
-#### Let's take a look at the distribution for different regions...
-
-```{r echo=FALSE, fig.width = 10, fig.height = 10}
-region_coloring <- c(
-  Northeast = "#8414eb",
-  South = "#7BAB14",
-  Midwest = "#13D3EC",
-  West = "#EC2C13"
+```{r themes, include=FALSE}
+general_plot_theme <- theme(
+  text = element_text(family = "mono"),
+  axis.text = element_text(size = 18),
+  axis.title = element_markdown(lineheight = 1.5, size = 21),
+  axis.ticks = element_blank(),
+  plot.title.position = "plot",
+  legend.position = "none",
+  plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
+  panel.border = element_blank(),
+  strip.background = element_blank(),
+  strip.text = element_text(size = 18),
+  axis.title.y = element_markdown(lineheight = 1.5, size = 22, angle = 0, vjust = 0.5)
 )
 
-schools_cleaned %>%
-  drop_na(`Test Score`) %>%
+without_grid_theme <- theme(
+  panel.grid = element_blank()
+)
+
+without_xgrid_theme <- theme(
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+)
+
+without_ygrid_theme <- theme(
+  panel.grid.major.y = element_blank(),
+  panel.grid.minor.y = element_blank(),
+)
+```
+
+```{r include=FALSE}
+schools <- read_xlsx(here::here("US_schools_data.xlsx"))
+regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
+```
+
+```{r}
+schools_cleaned <- schools %>%
+  select(
+    PRIMARY_KEY, TOTAL_EXPENDITURE, INSTRUCTION_EXPENDITURE,
+    SUPPORT_SERVICES_EXPENDITURE, OTHER_EXPENDITURE, CAPITAL_OUTLAY_EXPENDITURE,
+    ends_with("READING"), ends_with("MATHEMATICS")
+  ) %>%
   mutate(
-    Region = fct_relevel(Region, "West", "Midwest", "South", "Northeast"),
+    Year = as.numeric(substr(PRIMARY_KEY, 1, 4)),
+    State = substring(PRIMARY_KEY, 6),
+    Decade = Year %/% 10 * 10
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  pivot_longer(
+    c(ends_with("READING"),  ends_with("MATHEMATICS")),
+    names_to = c("Grade", "Race", "Sex", "Test"),
+    names_sep = "_",
+    values_to = "Test Score"
+  )
+
+regionizer <- regionizer %>%
+  mutate(
+    State = str_to_lower(State)
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    State = str_replace_all(str_to_lower(State), "_", " ")
+  ) %>%
+  left_join(regionizer, by = "State") %>%
+  select(-PRIMARY_KEY)
+
+schools_cleaned <- schools_cleaned %>%
+  mutate(
+    Grade = str_extract(Grade, "[0-9]$"),
+    Sex = str_replace(Sex, "A", "all"),
+    across(c("State", "Grade", "Race", "Sex", "Test", "Region", "Division"), as.factor)
+  )
+
+schools_cleaned <- schools_cleaned %>%
+  filter(!is.na(Region))
+
+levels(schools_cleaned$Race) <- c("All",
+                                  "Native",
+                                  "Asian",
+                                  "Black",
+                                  "Latinx",
+                                  "Pac. Islander",
+                                  "Mixed Race",
+                                  "White"
+                                  )
+
+schools_cleaned$Race <- droplevels(schools_cleaned$Race, exclude = "All")
+
+```
+
+
+# Data Visualization
+
+First, we have our plot of the relationship between instructional expenditures and testing scores, and how they differ when we factor in Region.
+
+```{r, fig.width = 10, fig.height = 10}
+
+schools_cleaned %>%
+  drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
+  mutate(
+    INSTRUCTION_EXPENDITURE = INSTRUCTION_EXPENDITURE / 1000000 # divide by million for graphing
+  ) %>%
+  ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
+  geom_smooth(method = "lm", color = "purple", fill = "yellow") +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40)) +
+  facet_wrap(~ Region) +
+  theme_bw() +
+  general_plot_theme +
+  ggtitle("**_Instruction Expenditures (in millions)<br>and Test Scores by Region_**") +
+  xlab("Instruction Expenditures (in millions)") +
+  ylab("Test<br>Scores")
+```
+
+Looking at the overall trend of the above plot, we can see that $Northeast$ stays relatively flat, and doesn't have much alteration in test score as instruction expenditure increases. The $Midwest$ does see a slight increase in test score as instruction expenditure increases, but it is not by a larger amount. In the $South$, there is the largest increase in test scores among all regions when instruction expenditure is increased, showing a strong positive correlation between those variables. In the $West$ on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possibly indicate something having to do with other factors in the $West$, such as school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the $South$ has the strongest relationship among all regions though.
+
+Regarding the Sex and Race variables being implemented into the plot, we added them and found that they did not add much to it as there was little to no variation between the different levels. Since they just made the plot overall more difficult to interpret, we decided to not include them in this final write up as it wouldn't provide any useful information to the final model.
+
+Next, we have the plot of the relationship between test score and test type where we will also include the Race variable to see how it impacts the relationship.
+
+```{r echo=FALSE, fig.width = 10, fig.height = 10}
+
+schools_cleaned %>%
+  drop_na(`Test Score`, Race) %>%
+  mutate(
     Test = case_when(
       Test == "READING" ~ "Reading Scores",
       TRUE ~ "Math Scores"
     )
   ) %>%
-  ggplot(aes(x = `Test Score`, y = Test, fill = Region)) +
+  ggplot(aes(x = `Test Score`, y = Test, fill = Race)) +
   geom_boxplot(width = 0.6,
-               position = position_dodge(width = 0.7)) +
-  geom_jitter(aes(color = Region), alpha = 0.1, position = position_jitterdodge()) +
-  # geom_density_ridges() +
-  labs(title = "**_Reading and Math Test Scores across Regions_**", y = "", x = "") +
+               position = position_dodge(width = 0.7), alpha = 0.3) +
+  geom_jitter(aes(color = Race), alpha = 0.25, position = position_jitterdodge()) +
   geom_text(aes(x = 140, label = Test, family = "mono", fontface = "bold.italic"),
            stat = "summary",
            size = 6.5,
@@ -180,55 +175,52 @@ schools_cleaned %>%
            check_overlap = TRUE,
            vjust = "inward",
            hjust="inward") +
-  geom_text(aes(x = 160, y = Test, label = Region, color = Region, family = "mono"),
+  geom_text(aes(x = 160, y = Test, label = Race, color = Race, family = "mono"),
            stat = "summary",
-           size = 5,
+           size = 4,
            position = position_dodge(width = 0.7)) +
-  scale_fill_manual(values = region_coloring) +
-  scale_color_manual(values = region_coloring) +
+  labs(title = "**_Reading and Math Test Scores by Races_**", y = "", x = "") +
   scale_x_continuous(breaks = c(180, 220, 260, 300), expand = c(0, 0)) +
-  scale_y_discrete(expand = c(0.6, 0)) +
+  scale_y_discrete(expand = c(0, 0)) + # Fix padding issues
   theme_bw() +
-  theme(axis.text = element_text(size=13),
-        axis.ticks.y=element_blank(),
-        axis.text.y = element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 24, family = "serif"),
-        panel.border = element_blank())
+  general_plot_theme +
+  theme(axis.ticks.x = element_line(),
+        panel.grid = element_blank())
 ```
 
-```{r include=FALSE}
+Looking at the above plot, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the $White$ and $Asian$ races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public versus private schooling. For this reason, race is definitely a variable that will provide interesting insight to our final model.
+
+Once again, we decided not to include both the Region and Sex variables as part of the graph, as they were not indicative of any real change between test scores, and we wouldn't understand much from an interpretation with those.
+
+Lastly, we will be plotting the relationship between test scores and expenditures and how that relationship differs over time. Once again we are going to be including the Region and Race variables to see how they influence the relationship.
+
+```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
   mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
+    Decade = (as.numeric(Year) %/% 10) * 10,
+    INSTRUCTION_EXPENDITURE = INSTRUCTION_EXPENDITURE / 1000000
   ) %>%
   drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color = Region)) +
-  geom_point() +
-  facet_wrap(Region ~ Decade, ncol = 3)
-
-schools_cleaned %>%
-  mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
-  ) %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_point() +
-  facet_wrap(Sex ~ Decade)
-
+  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color=Race)) +
+  #geom_jitter(alpha=0.1) +
+  geom_smooth(method = "lm", fill = "lightgray") +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40)) +
+  facet_wrap(Region ~ Decade, ncol = 3) +
+  theme_bw() +
+  general_plot_theme +
+  without_xgrid_theme +
+  ggtitle("**_Instruction Expenditures (in millions)and<br>Test Scores by Region and Race Over Time_**") +
+  xlab("Instruction Expenditures (in millions)") +
+  ylab("Test<br>Scores")
 
 # NAs for many of the Races for 1990s and 2000s
-schools_cleaned %>%
-  mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
-  ) %>%
-  drop_na(`Test Score`) %>%
-  ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE)) +
-  geom_point() +
-  facet_wrap(Race ~ Decade)
 ```
+
+As can be seen, Region and Race are once again variables that show reasonable and interesting differences between test score and instruction expenditure over time. Sex wasn't a variable that we wished to include as it was not useful to us understanding the relationship between test score and expenditure over time. One thing that we want to point out first is that race is not tracked individually until the 2010s, indicating that anytime before then it perhaps wasn't seen as a variable that brought any value to the relationship. One thing that is interesting about these graphs is that the $Midwest$, $Northeast$, and $South$ have all greatly improved upon their test scores overtime, regardless of race. Despite this, the $West$ is seen with a negative relationship between the two variables, which is something to note. We can see that most of the races follow along with the general trend for the specific region, but there are a few races that differ from the others, such as $Native$ in the $South$ and $Pacific Islander$ in the $West$. This could have to do with fundamental and cultural differences for those races in those specific regions, leaving us with more investigating to do when it comes to specific races.
+
+# Linear Regression
+
+Here we went ahead and fit two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.
 
 ```{r}
 math_model <- schools_cleaned %>%
@@ -242,11 +234,27 @@ reading_model <- schools_cleaned %>%
   lm(`Test Score` ~ INSTRUCTION_EXPENDITURE, data=.)
 ```
 
+### Results from creating model of Instructional Expenditures versus Test Score of certain type
+
 ```{r}
-summary(math_model)
-summary(reading_model)
+tribble(
+  ~Test, ~`Adjusted R^2`, ~`Inst Exp Term p-value`,
+  "Math", summary(math_model)$adj.r.squared, summary(math_model)$coefficients[8],
+  "Reading", summary(reading_model)$adj.r.squared, summary(reading_model)$coefficients[8],
+)
 ```
 
+After running both models, there are a number of different summary statistics that we can look at which will help us in understanding the linear models better. Looking first at the linear model for the mathematics test, we will analyze the adjusted R-Squared and the p-value for the model. The adjusted R-Squared for this model is 0.004266 which is not great by any means, and interpreting this it means that 0.4266% of the variation in Test Score can be explained by our model. The p-value for this model is 2.566e-05 which is really small and indicates that our model is statistically significant. With this, we can reject the null hypothesis and conclude that instruction expenditure is an accurate predictor of test score for the Mathematics test.
+
+Now analyzing the reading model, we can see that the adjusted R-Squared is 0.003594 which is also extremely small and worse than the mathematics model. To interpret this, we would say that 0.3594% of the variation in Test Score can be explained by our model. The p-value for the reading model is still small but larger than the mathematics model at 6.57e-05. We would still conclude that this model is statistically significant and reject the null hypothesis, and conclude that instruction expenditure is an accurate predictor of test score for the Mathematics test.
+
+## Model Comparison
+
+After analyzing both of the models, we are able to see that the mathematics test accounts for a larger proportion of the variability in test score, compared to the reading test. We found adjusted R-Squared values for the math model and reading model of 0.004266 and 0.003594, respectively. This difference is not that substantial since both of these numbers are quite small, but we do see that the math model has a higher adjusted R-Squared, indicating that the math test accounts for the larger proportion in Test Score variability.
+
+## Multiple Linear Regression
+
+### Both Tests
 ```{r}
 schools_cleaned <- within(schools_cleaned, Test <- relevel(Test, ref="MATHEMATICS"))
 
@@ -254,27 +262,244 @@ test_model <- schools_cleaned %>%
   drop_na(`Test Score`) %>%
   lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test, data=.)
 
-summary(test_model)
+tribble(
+  ~`Predictors for Test Score`, ~`Adjusted R^2`,
+  "INSTRUCTION_EXPENDITURE & Test", summary(test_model)$adj.r.squared,
+)
 ```
+
+After including the new Test variable as an explanatory variable in our model, we can see that this model does account for a larger proportion of variability in Test Score, with an adjusted R-Squared value of 0.1288, which interpreted means that 12.88% of the variation in Test Score can be explained in our model. This in fact accounts for more variation than the other two models separately.
+
+# Deciding on a Model
 
 ```{r}
 test_model <- schools_cleaned %>%
   drop_na(`Test Score`) %>%
   lm(`Test Score` ~ INSTRUCTION_EXPENDITURE + Test + Year, data=.)
 
-summary(test_model)
+tribble(
+  ~`Predictors for Test Score`, ~`Adjusted R^2`,
+  "INSTRUCTION_EXPENDITURE & Test & Year", summary(test_model)$adj.r.squared,
+)
 ```
 
-```{r eval=FALSE}
-temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
+To test to see how other variables improve our overall model, we included the Year variable to see how the adjusted R-Squared would change with the addition. Running this new model, we can see that the adjusted R-Squared is now 0.1569, which is almost a 3% increase in adjusted R-Squared from our last model (0.1288). With this increase just by adding the Year variable, we will further explore into how other variables within the data can improve our model even more in the next section.
 
-model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race + Division + Grade, data=temp)
+## Linear Model Selection Steps
+
+### Using Best Subset Method
+
+We chose our model using the Best Subset method. This is done by stepping though each possible predictor if the model only had step $n$ predictors and creating a model using each predictor unused in step $1$ through $n-1$ before and seeing what the new adjusted $R^2$ is with all previous predictors picked in the model and the new predictor we are testing. If predictor that causes the best improvement of adjusted $R^2$ is picked as the new predictor to add to the model if you chose a model with step $n$ predictors.
+
+This can be visualized in a table that records the new best model at each step and keeps track of its adjusted $R^2$. For us, it ends up looking like this:
+
+
+```{r echo=FALSE}
+# set subtraction: https://stat.ethz.ch/R-manual/R-patched/library/base/html/sets.html
+
+predictor_diff <- function(x) {
+  return(unlist(str_split(x, " ")))
+}
+
+# Scorer is required for ols_step_best_subset
+
+temp <- schools_cleaned %>%
+  mutate(Race = case_when(is.na(as.character(Race)) ~ "All",
+                          TRUE ~ as.character(Race)),
+         Race = as_factor(Race),
+         Scorer = `Test Score`) %>%
+  drop_na(`Test Score`)
+
+model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race + Grade, data=temp)
 
 # We used these functions for STAT 334 (Applied Linear Models) to do variable selection
 # all_sub1 <- ols_step_all_possible(model1)
-best.sub1 <- ols_step_best_subset(model1)
+best_sub_predictors <- ols_step_best_subset(model1, metric = "adjr")
+
+best_sub_predictors <- best_sub_predictors %>%
+  select(n, predictors, adjr) %>%
+  as_tibble() %>%
+  mutate(
+    behind = lag(predictors),
+  ) %>%
+  rowwise() %>%
+  mutate(
+    predictor_added = setdiff(predictor_diff(predictors), predictor_diff(behind))
+  ) %>%
+  select(-behind)
+
+best_sub_predictors %>%
+  select(n, predictor_added, adjr, predictors) %>%
+  rename(`Model Predictors` = n,
+         Predictors = predictors,
+         `Adjusted R^2` = adjr,
+         `Predictor Added` = predictor_added)
 ```
 
-### Citations
-- Putting title at top of grid.arrange output https://www.tutorialspoint.com/how-to-add-title-at-the-top-of-multi-plots-created-by-using-gridextra-in-r
 
+We can see that as the number of predictors we add increases, so does our model's adjusted $R^2$. However, if we look at how they are increasing, we see the rate of increase after the number of predictors is $3$ is pretty negligible.
+
+```{r echo=FALSE, fig.width=10}
+best_sub_predictors %>%
+  mutate(
+    predictor_added = case_when(
+      predictor_added == "INSTRUCTION_EXPENDITURE" ~ "Inst. Exp.",
+      TRUE ~ predictor_added
+    )
+  ) %>%
+  ggplot(mapping = aes(x = n, y = adjr)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(x = "Number of Predictors in Model",
+       y = "Adjusted _R_^2",
+       title = "Effect of Addition of New Predictors<br>to Model on the Adjusted _R_^2") +
+  geom_text(aes(label = predictor_added),
+            size = 6,
+            nudge_y = -0.015,
+            nudge_x = 0.25) +
+  scale_x_continuous(breaks = best_sub_predictors$n) +
+  ylim(0.6, 1) +
+  theme_bw() +
+  general_plot_theme +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    plot.title.position = "plot",
+  )
+```
+
+Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep $Grade$, $Test$, and $Race$ as predictors for our model.
+
+### Using All Possible Models Method
+
+One thing to note here is that we also ran a model selection algorithm that tried creating all possible models by creating all permutations of the predictors. This yielded similar results to the best subset so we used the Best Subset method from then on since that algorithm runs much faster.
+
+## Visualization of the Final Model Selected
+
+```{r, fig.width = 10, fig.height = 10}
+schools_cleaned %>%
+  filter(!is.na(Race)) %>%
+  ggplot(aes(x = `Test Score`, y = Test, fill = Grade)) +
+  geom_density_ridges(alpha = 0.5) +
+  scale_fill_manual( values = c("steelblue","peachpuff2")) +
+  facet_wrap(~ Race) +
+  theme_bw() +
+  general_plot_theme +
+  without_ygrid_theme +
+  labs(title =  "**_Test Scores for Grades <span style='color:steelblue;'>Four</span>
+and <span style = 'color:peachpuff2;'>Eight</span><br>based on Race_**") +
+  xlab("Test Scores") +
+  ylab("")
+
+```
+
+
+We can see from this graph that all of our predictors are meaningful. The `Test` type the children had (reading or mathematics) makes a difference in the overall score. We see that math score distributions have higher test scores than the reading score ones, meaning `Test` type probably is a good predictor for our model. Children in grade $8$ clearly score higher than children in grade $4$. This supports our idea that $Grade$ would be a good predictor. Additionally, we see that the scores are different per $Race$, but it is not as pronounced as it is for $Grade$. For instance, if we look at $Asian$ scores vs $\text{Pacific Islander}$ scores, there is a shift in the ridges. All of this shows that our linear model predictors make sense to have, as they all in some way help to show differences in test scores.
+
+### Final Thoughts on Model Selected
+
+We did drop all test scores that were NA. The reason we did this was because the linear model can't use them because $\text{Test Score}$ is the response variable for our model. We considered changing the NAs to be the mean for that $\text{Race/Grade/Test}$ but that would give the model a large number of observations that weren't really tested, as the number of NAs test score observations outnumbered those that were non NAs. Thus we decided just to drop them. We do realize that this may reflect poorly for certain cohorts within our model that don't have as many observations any more. With more time, we would have explored that and do think it's important, though.
+
+# Predictive Checks for the Model
+
+## Visualizing Simulations from the Model
+
+Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is known as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values, and then adding normally distributed errors to those values.
+
+We then compare the response variable distributions of the observed data with the simulated data as follows:
+
+```{r fig.width = 10, fig.height = 10}
+
+schools_lm <- schools_cleaned %>%
+  lm(`Test Score` ~ Test + Race + Grade, data = .)
+
+schools_predict <- predict(schools_lm)
+
+schools_sigma <- sigma(schools_lm)
+
+noise <- function(x, mean = 0, sd){
+  n <- length(x)
+  new_data <- x + rnorm(n, mean, sd)
+  return(new_data)
+}
+
+schools_new_data <- tibble(predict_score = noise(schools_predict,
+                                                 sd = schools_sigma))
+
+pred <- schools_new_data %>% 
+  ggplot(aes(x = predict_score)) +
+  geom_histogram(fill = "lemonchiffon3") +
+  theme_bw() +
+  general_plot_theme +
+  scale_x_continuous(breaks = c(200, 250, 300)) +
+  xlab("Simulated Test Scores") +
+  ylab("Frequency")
+
+obs <- schools_cleaned %>% 
+  ggplot(aes(x = `Test Score`)) + 
+  geom_histogram(fill = "lemonchiffon3") +
+  theme_bw() +
+  general_plot_theme +
+  xlab("Observed Test Score") +
+  scale_x_continuous(breaks = c(200, 250, 300)) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+  )
+
+gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Frequency of Test Scores",
+                        widths = c(1/2, 1/2.5))
+
+```
+
+In the plots above, we see that the response variable distribution of the simulated data is not exactly the same as the observed, but it is quite similar. For example, both distributions have a minimum around 150 and maximum of around 350. Also, there appears to be a slight bimodal shape in the observed distribution, which is definitely more defined in the simulated distribution. With these characteristics in mind, we can make an educated guess that both distributions could have come from the same data generating process.
+
+## Generating Multiple Predictive Checks
+
+Although we compared the distributions of the simulated and observed, we can conduct a more comprehensive test by doing multiple predictive checks. To do so, we first generate 1000 simulated datasets and then regress each with the observed data.
+
+We then plot the distribution of the R-squared values for each regression as follows:
+
+```{r fig.width = 10, fig.height = 10}
+nsims <- 1000
+
+set.seed(42)
+
+sims <- map_dfc(1:nsims,
+                ~tibble(sim = noise(schools_predict, sd = schools_sigma))) 
+
+colnames(sims) <- colnames(sims) %>% 
+  str_replace(pattern = "\\.\\.\\.",
+                  replace = "_")
+
+sims <- schools_cleaned %>% 
+  filter(!is.na(`Test Score`), !is.na(Race)) %>% 
+  select(`Test Score`) %>% 
+  bind_cols(sims)
+
+sim_r_sq <- sims %>% 
+  map( ~lm(`Test Score` ~ .x, data = sims)) %>% 
+  map(glance) %>% 
+  map_dbl(~.$r.squared)
+
+sim_r_sq <- sim_r_sq[names(sim_r_sq) != "Test Score"]
+
+tibble(sims = sim_r_sq) %>% 
+  ggplot(aes(x = sims)) + 
+  geom_histogram(binwidth = 0.001, fill = "tomato") +
+  theme_bw() +
+  general_plot_theme +
+  labs(title = "**Distribution of the Simulated _R_^2 Values**") +
+  xlab("Simulations") +
+  ylab("Count")
+```
+
+From the plot above, we see that the R-squared from the regressions are between 0.855 and 0.880, with a median around 0.869. Thus, we conclude that on average, our model does account for 86.9% of the observed variability in the observed Test Scores.
+
+The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data. All in all, the model accurately describes the relationships that our present in the dataset.
+
+# Final Thoughts
+
+With our ending model, we believe that there are some ethical implications to be considered when we were creating this model. Analylzing this data, it is evident that the variables of $Test$ and $Grade$ are probably not as controversial to use in a model, but $Race$ definitely is. So if we were to essentially recreate the model and put it out into the world, we should be more mindful of the $Race$ variable and take into consideration the implications that can come about the data that is shown and the predictions the model would make using $Race$. If this data were to be published, it could be detrimental to some specific racial groups' self-image if the data shows that statistically they would score lower than other races on a certain test. Doing this would be much more mindful to society as a whole and allow for the data to be presented in a manner that does not harm others.

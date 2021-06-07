@@ -13,7 +13,7 @@
       <pubDate>Thu, 03 Jun 2021 00:00:00 +0000</pubDate>
       
       <guid>/2021/06/03/predicting-test-scores-using-linear-regression/</guid>
-      <description>Getting the DataExploring Our Cleaned DataSome thoughts beforehand:How Reading and Math Scores DifferCitations--------Getting the DataWe recommend using the read_xlsx() and read_csv() functions for reading in the appropriate data. You can find the schools dataset here and the regionizer dataset here. If you just want the cleaned dataset (schools_cleaned), you can find that here.</description>
+      <description>IntroductionGetting the DataData VisualizationLinear RegressionResults from creating model of Instructional Expenditures versus Test Score of certain typeModel ComparisonMultiple Linear RegressionBoth TestsDeciding on a ModelLinear Model Selection StepsUsing Best Subset MethodUsing All Possible Models MethodVisualization of the Final Model SelectedFinal Thoughts on Model SelectedPredictive Checks for the ModelVisualizing Simulations from the ModelGenerating Multiple Predictive ChecksFinal ThoughtsIntroductionThe data used for this project is from the Urban Institute’s API which is widely used as an education data explorer.</description>
     </item>
     
   </channel>
