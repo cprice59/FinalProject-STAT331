@@ -332,7 +332,7 @@ best_sub_predictors %>%
 ```
 
 
-We can see that as the number of predictors we add increases, so does our model's adjusted $R^2$. However, if we look at how they are increasing, we see rate of increase after the number of predictors is $3$ is pretty negligible.
+We can see that as the number of predictors we add increases, so does our model's adjusted $R^2$. However, if we look at how they are increasing, we see the rate of increase after the number of predictors is $3$ is pretty negligible.
 
 ```{r echo=FALSE, fig.width=10}
 best_sub_predictors %>%
@@ -365,7 +365,7 @@ best_sub_predictors %>%
   )
 ```
 
-Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep $Grade$, $Test$, and $Race$ in our predictor.
+Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep $Grade$, $Test$, and $Race$ as predictors for our model.
 
 #### Using All Possible Models Method
 
@@ -390,13 +390,18 @@ and <span style = 'color:peachpuff2;'>Eight</span><br>based on Race_**") +
 
 ```
 
-We can see from this graph that all of our predictors are meaningful. The `Test` type the children had (reading or mathematics) makes a difference in the overall score. We see that math score distributions have higher test scores than the reading score ones, meaning `Test` type probably is a good predictor for our model. Children in grade $8$ clearly score higher than children in grade $4$. This supports our idea that $Grade$ would be a good predictor. Additionally, we see that the scores are different per $Race$, but it is not as pronounced as it is for $Grade$. For instance, if we look at $Asian$ scores vs $Pacific Islander$ scores, there is a shift in the ridges. All of this shows that our linear model predictors make sense to have, as they all in some way help to show differences in test scores.
+
+We can see from this graph that all of our predictors are meaningful. The `Test` type the children had (reading or mathematics) makes a difference in the overall score. We see that math score distributions have higher test scores than the reading score ones, meaning `Test` type probably is a good predictor for our model. Children in grade $8$ clearly score higher than children in grade $4$. This supports our idea that $Grade$ would be a good predictor. Additionally, we see that the scores are different per $Race$, but it is not as pronounced as it is for $Grade$. For instance, if we look at $Asian$ scores vs $\text{Pacific Islander}$ scores, there is a shift in the ridges. All of this shows that our linear model predictors make sense to have, as they all in some way help to show differences in test scores.
+
+### Final Thoughts on Model Selected
+
+We did drop all test scores that were NA. The reason we did this was because the linear model can't use them because $\text{Test Score}$ is the response variable for our model. We considered changing the NAs to be the mean for that $\text{Race/Grade/Test}$ but that would give the model a large number of observations that weren't really tested, as the number of NAs test score observations outnumbered those that were non NAs. Thus we decided just to drop them. We do realize that this may reflect poorly for certain cohorts within our model that don't have as many observations any more. With more time, we would have explored that and do think it's important, though.
 
 # Predictive Checks for the Model
 
 ## Visualizing Simulations from the Model
 
-Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is know as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values and then adding normally distributed errors to those values.
+Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is known as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values, and then adding normally distributed errors to those values.
 
 We then compare the response variable distributions of the observed data with the simulated data as follows:
 
@@ -486,6 +491,11 @@ tibble(sims = sim_r_sq) %>%
   ylab("Count")
 ```
 
-From the plot above, we see that the R-squared from the regressions are between 0.79 and 0.81, with a mode around 0.805. Thus, we conclude that on average, our model does not account for 19.5% of the observed variability in the observed Test Scores.
+From the plot above, we see that the R-squared from the regressions are between 0.855 and 0.880, with a median around 0.869. Thus, we conclude that on average, our model does account for 86.9% of the observed variability in the observed Test Scores.
 
-The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data.
+The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data. All in all, the model accurately describes the relationships that our present in the dataset.
+
+# Ethical Implications
+
+With our ending model, we believe that there are some implications we considered when we were creating this model. Analylzing this data, it is evident that the variables of $Test$ and $Grade$ are not the most impactful towards others, but $Race$ definitely is. So if we were to essentially recreate the model and put it out into the world, we should be more mindful of the Race variable and take into consideration the implications that can come about the data that is shown. If this data were to be published, it could be detrimental to some specific racial groups self-image if the data shows that statistically they would score lower than other races on a certain test. Doing this would be much more mindful to society as a whole and allow for the data to be presented in a manner that does not harm others.
+
