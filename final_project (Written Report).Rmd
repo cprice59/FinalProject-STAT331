@@ -375,6 +375,10 @@ and <span style = 'color:peachpuff2;'>Eight</span> based on Race_**") +
 
 ## Visualizing Simulations from the Model
 
+Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is know as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values and then adding normally distributed errors to those values.
+
+We then compare the response variable distributions of the observed data with the simulated data as follows:
+
 ```{r fig.width = 10, fig.height = 10}
 
 schools_lm <- schools_cleaned %>%
@@ -412,7 +416,13 @@ gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Responses")
 
 ```
 
+In the plots above, we see that the response variable distribution of the simulated data is not exactly the same as the observed, but it is quite similar. For example, both distributions have a minimum around 150 and maximum of around 350. Also, there appears to be a slight bimodal shape in the observed distribution, which is definitely more defined in the simulated distribution. With these characteristics in mind, we can make an educated guess that both distributions could have come from the same data generating process.
+
 ## Generating Multiple Predictive Checks
+
+Although we compared the distributions of the simulated and observed, we can conduct a more comprehensive test by doing multiple predictive checks. To do so, we first generate 1000 simulated datasets and then regress each with the observed data.
+
+We then plot the distribution of the R-squared values for each regression as follows:
 
 ```{r fig.width = 10, fig.height = 10}
 nsims <- 1000
@@ -450,12 +460,6 @@ tibble(sims = sim_r_sq) %>%
   ylab("Count")
 ```
 
+From the plot above, we see that the R-squared from the regressions are between 0.79 and 0.81, with a mode around 0.805. Thus, we conclude that on average, our model does not account for 19.5% of the observed variability in the observed Test Scores.
 
-```{r}
-
-test <- schools_cleaned %>%
-  lm(`Test Score` ~ Test + Race + Grade, data = .)
-
-summary(test)
-
-```
+The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data.
