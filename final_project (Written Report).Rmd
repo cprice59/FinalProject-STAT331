@@ -2,7 +2,9 @@
 title: "Final Project"
 author: "Group 4"
 date: "5/27/2021"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -15,18 +17,37 @@ library(here)
 library(readxl)
 library(broom)
 library(ggtext)
-library(latex2exp)
 library(ggridges)
 library(olsrr)
 library(ggtext)
 ```
 
-```{r include=FALSE}
-theme_helper <- theme(
-  axis.text = element_text(size = 20),
-  axis.title = element_text(size = 26),
-  plot.title = element_text(size = 35),
-  plot.title.position = "plot"
+```{r themes, include=FALSE}
+general_plot_theme <- theme(
+  text = element_text(family = "mono"),
+  axis.text = element_text(size = 18),
+  axis.title = element_markdown(size = 22),
+  axis.ticks = element_blank(),
+  plot.title.position = "plot",
+  legend.position = "none",
+  plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
+  panel.border = element_blank(),
+  strip.background = element_blank(),
+  strip.text = element_text(size = 18)
+)
+
+without_grid_theme <- theme(
+  panel.grid = element_blank()
+)
+
+without_xgrid_theme <- theme(
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+)
+
+without_ygrid_theme <- theme(
+  panel.grid.major.y = element_blank(),
+  panel.grid.minor.y = element_blank(),
 )
 ```
 
@@ -37,8 +58,6 @@ regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
 ```
 
 # Part 1
-
-## Data Cleaning
 
 ```{r}
 schools_cleaned <- schools %>%
@@ -112,24 +131,17 @@ First, we have our plot of the relationship between instructional expenditures a
 
 schools_cleaned %>%
   drop_na(INSTRUCTION_EXPENDITURE, `Test Score`) %>%
+  mutate(
+    INSTRUCTION_EXPENDITURE = INSTRUCTION_EXPENDITURE / 1000000 # divide by million for graphing
+  ) %>%
   ggplot(mapping = aes(x = INSTRUCTION_EXPENDITURE, y = `Test Score`))+
   geom_smooth(method = "lm", color = "purple", fill = "yellow") +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40)) +
   facet_wrap(~ Region) +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=18),
-        axis.title.y = element_text(size=18),
-        axis.title.x = element_text(size=18),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
-        panel.border = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=15)) +
-  ggtitle("**_Relationship between Intruction Expenditures and Test Scores for each Region_**") +
-  xlab("Instruction Expenditures") +
+  general_plot_theme +
+  ggtitle("**_Instruction Expenditures (in millions)<br>and Test Scores by Region_**") +
+  xlab("Instruction Expenditures (in millions)") +
   ylab("Test Scores")
 ```
 
@@ -140,13 +152,6 @@ Regarding the Sex and Race variables being implemented into the plots, we did tr
 Next, we have the plots that are for the relationship between test score and test type, where we will include the variables of Region, Sex, and Race and how they impact the relationship.
 
 ```{r echo=FALSE, fig.width = 10, fig.height = 10}
-
-# region_coloring <- c(
-#   Northeast = "#8414eb",
-#   South = "#7BAB14",
-#   Midwest = "#13D3EC",
-#   West = "#EC2C13"
-# )
 
 schools_cleaned %>%
   drop_na(`Test Score`, Race) %>%
@@ -173,19 +178,12 @@ schools_cleaned %>%
            stat = "summary",
            size = 5,
            position = position_dodge(width = 0.7)) +
-  #scale_fill_manual(values = region_coloring) +
-  #scale_color_manual(values = region_coloring) +
   scale_x_continuous(breaks = c(180, 220, 260, 300), expand = c(0, 0)) +
-  scale_y_discrete(expand = c(0.6, 0)) +
+  scale_y_discrete(expand = c(0, 0)) + # Fix padding issues
   theme_bw() +
-  theme(axis.text = element_text(size=13),
-        axis.ticks.y=element_blank(),
-        axis.text.y = element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 24, family = "serif"),
-        panel.border = element_blank())
+  general_plot_theme +
+  theme(axis.ticks.x = element_line(),
+        panel.grid = element_blank())
 ```
 
 In these plots, we will be looking at the relationship between test score and the specific test type. We will also overlay the region, sex, and race variables again so that we can analyze how those factor in to the relationship. Once again, we decided not to include both the region and sex variables as part of the graphs, as they are not indicative of any real change between test scores, and we wouldn't understand much from an interpretation with those. Looking at the plot including the Race variable, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the WH and AS races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public vs private schooling. For this reason, race is definitely a variable that will provide interesting insight to our model.
@@ -195,28 +193,20 @@ Lastly, we will be plotting the relationship between test scores and expenditure
 ```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
   mutate(
-    Decade = (as.numeric(Year) %/% 10) * 10
+    Decade = (as.numeric(Year) %/% 10) * 10,
+    INSTRUCTION_EXPENDITURE = INSTRUCTION_EXPENDITURE / 1000000
   ) %>%
   drop_na(`Test Score`) %>%
   ggplot(mapping = aes(y = `Test Score`, x = INSTRUCTION_EXPENDITURE, color=Race)) +
   #geom_jitter(alpha=0.1) +
   geom_smooth(method = "lm", fill = "lightgray") +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40)) +
   facet_wrap(Region ~ Decade, ncol = 3) +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=18),
-        axis.title.y = element_text(size=18),
-        axis.title.x = element_text(size=18),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
-        panel.border = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=15)) +
-  ggtitle("**_Relationship between Intruction Expenditures and Test Scores in each Region Over Time_**") +
-  xlab("Instruction Expenditures") +
+  general_plot_theme +
+  without_xgrid_theme +
+  ggtitle("**_Instruction Expenditures (in millions)<br>\tand Test Scores by Region Over Time_**") +
+  xlab("Instruction Expenditures (in millions)") +
   ylab("Test Scores")
 
 # NAs for many of the Races for 1990s and 2000s
@@ -339,21 +329,22 @@ best_sub_predictors %>%
   geom_point(size = 3) +
   geom_line() +
   labs(x = "Number of Predictors in Model",
-       y = TeX(r"(Adjusted $R^2$)"),
-       title = TeX(r"(Affect of Addition of New Predictors to Model)")) +
+       y = "Adjusted _R_^2",
+       title = "Effect of Addition of New Predictors<br>to Model on the Adjusted _R_^2") +
   geom_text(aes(label = predictor_added),
-            size = 8,
+            size = 6,
             nudge_y = -0.015,
             nudge_x = 0.25) +
   scale_x_continuous(breaks = best_sub_predictors$n) +
   ylim(0.6, 1) +
-  theme_bw(base_size = 29) +
+  theme_bw() +
+  general_plot_theme +
   theme(
     panel.border = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.title.y = element_text(angle=0,vjust = 0.5),
+    axis.title.y = element_blank(),
     axis.ticks = element_blank(),
-    plot.title.position = "plot"
+    plot.title.position = "plot",
   )
 ```
 
@@ -370,18 +361,8 @@ schools_cleaned %>%
   scale_fill_manual( values = c("steelblue","peachpuff2")) +
   facet_wrap(~ Race) +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=18),
-        axis.title.y = element_text(size=18),
-        axis.title.x = element_text(size=18),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
-        panel.border = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=15)) +
+  general_plot_theme +
+  without_ygrid_theme +
   labs(title =  "**_Test Scores for Grades <span style='color:steelblue;'>Four</span>
 and <span style = 'color:peachpuff2;'>Eight</span> based on Race_**") +
   xlab("Test Scores") +
@@ -417,36 +398,14 @@ pred <- schools_new_data %>%
   ggplot(aes(x = predict_score)) +
   geom_histogram(fill = "lemonchiffon3") +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=12),
-        axis.title.y = element_text(size=12),
-        axis.title.x = element_text(size=12),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
-        panel.border = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=12)) +
+  general_plot_theme +
   xlab("Simulated Test Scores")
 
 obs <- schools_cleaned %>% 
   ggplot(aes(x = `Test Score`)) + 
   geom_histogram(fill = "lemonchiffon3") +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=12),
-        axis.title.y = element_text(size=12),
-        axis.title.x = element_text(size=12),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 26, family = "mono"),
-        panel.border = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=12)) +
+  general_plot_theme +
   xlab("Observed Test Score") 
 
 gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Responses")
@@ -455,7 +414,7 @@ gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Responses")
 
 ## Generating Multiple Predictive Checks
 
-```{r eval=FALSE}
+```{r fig.width = 10, fig.height = 10}
 nsims <- 1000
 
 sims <- map_dfc(1:nsims,
@@ -485,16 +444,7 @@ tibble(sims = sim_r_sq) %>%
   ggplot(aes(x = sims)) + 
   geom_histogram(binwidth = 0.001, fill = "tomato") +
   theme_bw() +
-  theme(text = element_text(family = "mono"),
-        axis.text = element_text(size=14),
-        axis.title.y = element_text(size=14),
-        axis.title.x = element_text(size=14),
-        axis.ticks.y=element_blank(),
-        plot.title.position = "plot",
-        panel.grid = element_blank(),
-        legend.position = "none",
-        plot.title = element_markdown(lineheight = 1.5, size = 20, family = "mono"),
-        panel.border = element_blank()) +
+  general_plot_theme +
   labs(title = "**Distribution of the _R_^2 Values**") +
   xlab("Simulations") +
   ylab("Count")
