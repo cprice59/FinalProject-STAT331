@@ -4,6 +4,7 @@ author: "Group 4"
 date: "5/27/2021"
 output:
   prettydoc::html_pretty:
+    theme: cayman
     df_print: paged
 ---
 
@@ -26,7 +27,7 @@ library(ggtext)
 general_plot_theme <- theme(
   text = element_text(family = "mono"),
   axis.text = element_text(size = 18),
-  axis.title = element_markdown(lineheight = 1.5, size = 22),
+  axis.title = element_markdown(lineheight = 1.5, size = 21),
   axis.ticks = element_blank(),
   plot.title.position = "plot",
   legend.position = "none",
@@ -60,7 +61,7 @@ regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
 
 # Introduction
 
-INSERT INTRO
+The data used for this project is from the Urban Institute’s API which is widely used as an education data explorer. This specific dataset was designed to bring together multiple facets of U.S. education data into one file which includes information related to student’s $race$ and $sex$. The data is from 1992-2019 for every $state$ and is broken down by students enrolled in schools by school $year$. This dataset also includes the U.S. Census Bureau’s count for students enrolled in school  in each state along with the $\text{total revenue}$ and $\text{total expenditure}$ for each state. The revenue can be viewed on federal, state and local levels as well. The expenditure is divided into instruction, support services, capital outlay and an additional group with other expenditures. Student performances are assessed nationwide in grades 4 and 8 and are displayed in this data with the $\text{average math test scores}$ and $\text{average English test scores}$ for both grades. For purposes of this study, the data is analyzed across $Regions$ in the United States rather than individual states. The purpose of this research is to analyze a linear model to predict the relationship between $\text{Reading Test Scores}$ and $\text{Math Test Scores}$ across $Region$ and $Race$.
 
 ```{r}
 schools_cleaned <- schools %>%
@@ -143,9 +144,9 @@ schools_cleaned %>%
   ylab("Test<br>Scores")
 ```
 
-Looking at the overall distributions of first set of plots, we can see that the $Northeast$ is are relatively flat, and doesn't have much alteration in test score based off instruction expenditure. The $Midwest$ does see a slight increase in $Test Score$ as $instruction expenditure$ increases, but it is not by a larger amount. In the $South$, there is the best increase in test scores among all regions when instruction expenditure is increased, showing a positive correlation between those variables. In the $West$ on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possibly indicate something having to do with other factors in the $West$, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the South has the strongest relationship among all regions although.
+Looking at the overall distributions of first set of plots, we can see that the $Northeast$ is are relatively flat, and doesn't have much alteration in test score based off instruction expenditure. The $Midwest$ does see a slight increase in $\text{Test Score}$ as $\text{instruction expenditure}$ increases, but it is not by a larger amount. In the $South$, there is the best increase in test scores among all regions when instruction expenditure is increased, showing a positive correlation between those variables. In the $West$ on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possibly indicate something having to do with other factors in the $West$, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the South has the strongest relationship among all regions although.
 
-Regarding the Sex and Race variables being implemented into the plots, we did try those out and we found that they did not add much to the plots and made it overall more difficult to interpret. For this reason, we decided to not include them in this final write up as it wouldn't provide any useful information to the final model.
+Regarding the $Sex$ and $Race$ variables being implemented into the plots, we did try those out and we found that they did not add much to the plots and made it overall more difficult to interpret. For this reason, we decided to not include them in this final write up as it wouldn't provide any useful information to the final model.
 
 Next, we have the plots that are for the relationship between test score and test type, where we will include the variables of Region, Sex, and Race and how they impact the relationship.
 
@@ -164,7 +165,6 @@ schools_cleaned %>%
   geom_boxplot(width = 0.6,
                position = position_dodge(width = 0.7), alpha = 0.3) +
   geom_jitter(aes(color = Race), alpha = 0.25, position = position_jitterdodge()) +
-  labs(title = "**_Reading and Math Test Scores by Races_**", y = "", x = "") +
   geom_text(aes(x = 140, label = Test, family = "mono", fontface = "bold.italic"),
            stat = "summary",
            size = 6.5,
@@ -176,6 +176,7 @@ schools_cleaned %>%
            stat = "summary",
            size = 4,
            position = position_dodge(width = 0.7)) +
+  labs(title = "**_Reading and Math Test Scores by Races_**", y = "", x = "") +
   scale_x_continuous(breaks = c(180, 220, 260, 300), expand = c(0, 0)) +
   scale_y_discrete(expand = c(0, 0)) + # Fix padding issues
   theme_bw() +
@@ -210,7 +211,7 @@ schools_cleaned %>%
 # NAs for many of the Races for 1990s and 2000s
 ```
 
-As can be seen, region and race are once again variables that show reasonable and interesting differences between test score and instruction expenditure over time. Sex wasn't a variable that we wished to include as it was not useful to us understanding the relationship between test score and expenditure over time. One thing that we want to point out first off is that race is not tracked individually until the 2010s, indicating that anytime before then it wasn't seen as a variable that brought any value to the relationship. One thing that is interesting about these graphs is that the Midwest, Northeast, and South have all greatly improved upon their test scores overtime, regardless of race. Despite this, the West is seen with a negative relationship between the two variables, which is something to take note of. We can see that most of the races follow along with the general trend for the specific region, but there are a few races that differ from the others, such as AM in the South and HP in the West. This could have to do with fundamental and cultural differences for those races in those specific regions, leaving us with more investigating to do when it comes to specific races.
+As can be seen, region and race are once again variables that show reasonable and interesting differences between test score and instruction expenditure over time. Sex wasn't a variable that we wished to include as it was not useful to us understanding the relationship between test score and expenditure over time. One thing that we want to point out first off is that race is not tracked individually until the 2010s, indicating that anytime before then it wasn't seen as a variable that brought any value to the relationship. One thing that is interesting about these graphs is that the Midwest, Northeast, and South have all greatly improved upon their test scores overtime, regardless of race. Despite this, the West is seen with a negative relationship between the two variables, which is something to take note of. We can see that most of the races follow along with the general trend for the specific region, but there are a few races that differ from the others, such as AM in the South and HP in the West. This could have to do with fundamental and cultural differences for those races in those specific regions, leaving us with more investigating to do when it comes to specific races. As a note, we don't show the specific labeled Race for the lines in 2010 because we don't need to know the specifics to show a trend or difference between them.
 
 ## Linear Regression
 
@@ -323,6 +324,7 @@ best_sub_predictors <- best_sub_predictors %>%
   select(-behind)
 
 best_sub_predictors %>%
+  select(n, predictor_added, adjr, predictors) %>%
   rename(`Model Predictors` = n,
          Predictors = predictors,
          `Adjusted R^2` = adjr,
@@ -369,7 +371,7 @@ Thus, for performance reasons and to prevent possibly overfitting our model, we 
 
 One thing to note here is that we also ran a model selection algorithm that tried creating all possible models by creating all permutations of the predictors. This yielded similar results to the best subset so we used the Best Subset method from then on since that algorithm runs much faster.
 
-### How Grade affects Test Score Distribution
+### Visualization of the Final Model Selected
 
 ```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
@@ -388,7 +390,9 @@ and <span style = 'color:peachpuff2;'>Eight</span><br>based on Race_**") +
 
 ```
 
-EXPLAIN THIS GRAPH
+We can see from this graph that all of our predictors are meaningful. The `Test` type the children had (reading or mathematics) makes a difference in the overall score. We see that math score distributions have higher test scores than the reading score ones, meaning `Test` type probably is a good predictor for our model. Children in grade $8$ clearly score higher than children in grade $4$. This supports our idea that $Grade$ would be a good predictor. Additionally, we see that the scores are different per $Race$, but it is not as pronounced as it is for $Grade$. For instance, if we look at $Asian$ scores vs $Pacific Islander$ scores, there is a shift in the ridges. All of this shows that our linear model predictors make sense to have, as they all in some way help to show differences in test scores.
+
+# Predictive Checks for the Model
 
 ## Visualizing Simulations from the Model
 
@@ -411,25 +415,32 @@ noise <- function(x, mean = 0, sd){
   return(new_data)
 }
 
-schools_new_data <- tibble(predict_score = noise(schools_predict, 
-                                          sd = schools_sigma)
-                   )
+schools_new_data <- tibble(predict_score = noise(schools_predict,
+                                                 sd = schools_sigma))
 
 pred <- schools_new_data %>% 
   ggplot(aes(x = predict_score)) +
   geom_histogram(fill = "lemonchiffon3") +
   theme_bw() +
   general_plot_theme +
-  xlab("Simulated Test Scores")
+  scale_x_continuous(breaks = c(200, 250, 300)) +
+  xlab("Simulated Test Scores") +
+  ylab("Frequency")
 
 obs <- schools_cleaned %>% 
   ggplot(aes(x = `Test Score`)) + 
   geom_histogram(fill = "lemonchiffon3") +
   theme_bw() +
   general_plot_theme +
-  xlab("Observed Test Score") 
+  xlab("Observed Test Score") +
+  scale_x_continuous(breaks = c(200, 250, 300)) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+  )
 
-gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Responses")
+gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Frequency of Test Scores",
+                        widths = c(1/2, 1/2.5))
 
 ```
 
