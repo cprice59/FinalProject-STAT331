@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r include=FALSE}
@@ -14,22 +14,10 @@ library(tidyverse)
 library(here)
 library(readxl)
 library(broom)
-library(ggtext)
-library(latex2exp)
 library(ggridges)
 library(olsrr)
 library(ggtext)
 ```
-
-```{r include=FALSE}
-theme_helper <- theme(
-  axis.text = element_text(size = 20),
-  axis.title = element_text(size = 26),
-  plot.title = element_text(size = 35),
-  plot.title.position = "plot"
-)
-```
-
 
 ```{r include=FALSE}
 schools <- read_xlsx(here::here("US_schools_data.xlsx"))
@@ -133,11 +121,13 @@ schools_cleaned %>%
   ylab("Test Scores")
 ```
 
-Looking at the overall distributions of first set of plots, we can see that the Northeast is are relatively flat, and doesn't have much alteration in test score based off instruction expenditure. The Midwest does see a slight increase in Test Score as instruction expenditure increases, but it is not by a larger amount. In the South, there is the best increase in test scores among all regions when instruction expenditure is increased, showing a positive correlation between those variables. In the West on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possible indicate something having to do with other factors in the West, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that not all of these plots are strong, and only imply a slight correlation that might not be included in our final model. It is clear that the South has the strongest relationship among all regions although.
+Looking at the overall distributions of first set of plots, we can see that the Midwest and the Northeast both are relatively flat, and don't have much alteration in test score based off instruction expenditure. In the South, there is a slight increase in test scores when instruction expenditure is increased, showing a positive correlation betweent those variables. In the South on the other hand, we can see what appears to be a slight decline in the relationship, indicating what could be a negative correlation between expenditures and test scores. This could possible indicate something having to do with other variables in the West, such as maybe school population, or even private versus public school teaching. All in all, it is important to note that none of these plots are very strong by any means, and only imply a slight correlation that might not be included in our final model.
 
-Regarding the Sex and Race variables being implemented into the plots, we did try those out and we found that they did not add much to the plots and made it overall more difficult to interpret. For this reason, we decided to not include them in this final write up as it wouldn't provide any useful information to the final model.
+Taking a closer look at the second set of graphs, we can see that for the "all" sex category there is decent increase in test score with an increase in instruction expenditure. Although this distribution isn't the strongest, there is some positive correlation between the two variables when sex is factored in. Analyzing male and female individually, there isn't much difference in their correlations between test scores and expenditures. Overall, the sex variable does not appear to be too indicative of a relationship between expenditures and test scores, but it would be interesting to include in the model.
 
-Next, we have the plots that are for the relationship between test score and test type, where we will include the variables of Region, Sex, and Race and how they impact the relationship.
+Lastly, the plots with race overlaid in the relationship between test score and expenditure shows not much at all for a few of the categories such as HP and AM, indicating that we may want to remove these categories from the race variable. It appears that most of these races are flat and don't have much correlation at all, but the categories of TR and AS give some sign of positive correlation, making it an interesting variable to include in our model.
+
+Next, we have te plots that are for the relationship between test score and test type, where we will include the variables of Region, Sex, and Race and how they impact the relationship.
 
 ```{r echo=FALSE, fig.width = 10, fig.height = 10}
 
@@ -161,7 +151,7 @@ schools_cleaned %>%
   geom_boxplot(width = 0.6,
                position = position_dodge(width = 0.7), alpha = 0.3) +
   geom_jitter(aes(color = Race), alpha = 0.25, position = position_jitterdodge()) +
-  labs(title = "**_Reading and Math Test Scores across Races_**", y = "", x = "") +
+  labs(title = "**_Reading and Math Test Scores across Regions_**", y = "", x = "") +
   geom_text(aes(x = 140, label = Test, family = "mono", fontface = "bold.italic"),
            stat = "summary",
            size = 6.5,
@@ -188,9 +178,8 @@ schools_cleaned %>%
         panel.border = element_blank())
 ```
 
-In these plots, we will be looking at the relationship between test score and the specific test type. We will also overlay the region, sex, and race variables again so that we can analyze how those factor in to the relationship. Once again, we decided not to include both the region and sex variables as part of the graphs, as they are not indicative of any real change between test scores, and we wouldn't understand much from an interpretation with those. Looking at the plot including the Race variable, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the WH and AS races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public vs private schooling. For this reason, race is definitely a variable that will provide interesting insight to our model.
+In these plots, we will be looking at the relationship between test score and the specific test type. We will also overlay the region, sex, and race variables again so that we can analyze how those factor in to the relationship. In the plot for region first, we can see that the median of reading test scores is lower than those for mathematics (about 225 vs. about 250), indicating that the students in this study excel much better in mathematics. When looking how region influences this relationship, the regions don't differ too much from each other, indicating that the median test scores aren't that much different across regions. For the graph with the Sex variable included, we can see that when it comes to the reading test, the males in the study have lower test scores than the females, while for the mathematics test the male and female test scores are not much different from each other. Lastly, looking at the plot including the Race variable, we are able to see large differences among each of the races, regardless of test type. It is indicative by the plot that both the WH and AS races have higher overall test scores than the rest. This can be for a plethora of reasons such as economic status, region, and public vs privte schooling. For this reason, race is definitely a variable that will provide interesting insight to our model.
 
-Lastly, we will be plotting the relationship between test scores and expenditures and how that relationship differs over time. Once again we are going to be including the Region, Sex, and Race variables to see how they influence the relationship.
 
 ```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
@@ -222,11 +211,14 @@ schools_cleaned %>%
 # NAs for many of the Races for 1990s and 2000s
 ```
 
-As can be seen, region and race are once again variables that show reasonable and interesting differences between test score and instruction expenditure over time. Sex wasn't a variable that we wished to include as it was not useful to us understanding the relationship between test score and expenditure over time. One thing that we want to point out first off is that race is not tracked individually until the 2010s, indicating that anytime before then it wasn't seen as a variable that brought any value to the relationship. One thing that is interesting about these graphs is that the Midwest, Northeast, and South have all greatly improved upon their test scores overtime, regardless of race. Despite this, the West is seen with a negative relationship between the two variables, which is something to take note of. We can see that most of the races follow along with the general trend for the specific region, but there are a few races that differ from the others, such as AM in the South and HP in the West. This could have to do with fundamental and culturual differences for those races in those specific regions, leaving us with more investigating to do when it comes to specific races.
+Lastly, we will be plotting the relationship between test scores and expenditures and how that relationship differs over time. Once again we are going to be including the Region, Sex, and Race variables to see how the influence the relationship.
+
+For the first plot with Region, we can see some interesting changes overtime and how it compares across regions. For the Midwest it is interesting to see that there is a negative relationship between the variables in the 90s, and throughout the next two decades it improves to being a flat/slightly positive relationship between the variables. This could have something to do with an improvement in technology and better facilities for learning, which would improve test scores. Not much changes in the Northeast, but we do see changes within the South and the West, where the South starts off in a positive relationship and it increases even more, and the West is like the Midwest where it starts negative and improves to become flat over time. Overall, there are many different factors that could be influencing these changes over time, one being technological advances.
+
 
 ## Linear Regression
 
-Here we went ahead and fit two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.
+Here we went ahead and feet two linear models: one that investigates the relationship between instructional expenditures and mathematics test scores and one that investigates the relationship between instructional expenditures and reading test scores.
 
 ```{r}
 math_model <- schools_cleaned %>%
@@ -268,8 +260,6 @@ summary(test_model)
 
 After including the new Test variable as an explanatory variable in our model, we can see that this model does account for a larger proportion of variability in Test Score, with an Adjusted R-Squared value of 0.1288, which interpreted means that 12.88% of the variation in Test Score can be explained in our model. This in fact accounts for more variation than the other two models separately.
 
-# Deciding on a Model
-
 ```{r}
 test_model <- schools_cleaned %>%
   drop_na(`Test Score`) %>%
@@ -278,90 +268,16 @@ test_model <- schools_cleaned %>%
 summary(test_model)
 ```
 
-To test to see how other variables improve our overall model, we included the Year variable to see how the Adjusted R-Squared would change with the addition. Running this new model, we can see that the Adjusted R-Squared is now 0.1569, which is almost a 3% increase in Adjusted R-Squared from our last model (0.1288). With this increase just by adding the Year variable, we will further explore into how other variables within the data can improve our model even more in the next section.
-
-## Linear Model Selection Steps
-
-### Using Best Subset Method
-
-We chose our model using the Best Subset method. This is done by stepping though each possible predictor if the model only had step $n$ predictors and creating a model using each predictor unused in step $1$ through $n-1$ before and seeing what the new adjusted $R^2$ is with all previous predictors picked in the model and the new predictor we are testing. If predictor that causes the best improvement of adjusted $R^2$ is picked as the new predictor to add to the model if you chose a model with step $n$ predictors.
-
-This can be visualized in a table that records the new best model at each step and keeps track of its adjusted $R^2$. For us, it ends up looking like this:
-
-
-```{r echo=FALSE}
-# set subtraction: https://stat.ethz.ch/R-manual/R-patched/library/base/html/sets.html
-
-predictor_diff <- function(x) {
-  return(unlist(str_split(x, " ")))
-}
-
-# Scorer is required for ols_step_best_subset
+```{r}
 temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
 
 model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race  + Grade, data=temp)
 
 # We used these functions for STAT 334 (Applied Linear Models) to do variable selection
 # all_sub1 <- ols_step_all_possible(model1)
-best_sub_predictors <- ols_step_best_subset(model1, metric = "adjr")
-
-best_sub_predictors <- best_sub_predictors %>%
-  select(n, predictors, adjr) %>%
-  as_tibble() %>%
-  mutate(
-    behind = lag(predictors),
-  ) %>%
-  rowwise() %>%
-  mutate(
-    predictor_added = setdiff(predictor_diff(predictors), predictor_diff(behind))
-  ) %>%
-  select(-behind)
-
-best_sub_predictors %>%
-  rename(`Model Predictors` = n,
-         Predictors = predictors,
-         `Adjusted R^2` = adjr,
-         `Predictor Added` = predictor_added)
+best.sub1 <- ols_step_best_subset(model1)
 ```
 
-
-We can see that as the number of predictors we add increases, so does our model's adjusted $R^2$. However, if we look at how they are increasing, we see rate of increase after the number of predictors is $3$ is pretty negligible.
-
-```{r echo=FALSE, fig.width=10}
-best_sub_predictors %>%
-  mutate(
-    predictor_added = case_when(
-      predictor_added == "INSTRUCTION_EXPENDITURE" ~ "Inst. Exp.",
-      TRUE ~ predictor_added
-    )
-  ) %>%
-  ggplot(mapping = aes(x = n, y = adjr)) +
-  geom_point(size = 3) +
-  geom_line() +
-  labs(x = "Number of Predictors in Model",
-       y = TeX(r"(Adjusted $R^2$)"),
-       title = TeX(r"(Affect of Addition of New Predictors to Model)")) +
-  geom_text(aes(label = predictor_added),
-            size = 8,
-            nudge_y = -0.015,
-            nudge_x = 0.25) +
-  scale_x_continuous(breaks = best_sub_predictors$n) +
-  ylim(0.6, 1) +
-  theme_bw(base_size = 29) +
-  theme(
-    panel.border = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.title.y = element_text(angle=0,vjust = 0.5),
-    axis.ticks = element_blank(),
-    plot.title.position = "plot"
-  )
-```
-
-Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep $Grade$, $Test$, and $Race$ in our predictor.
-
-### Using All Possible Models Method
-
-One thing to note here is that we also ran a model selection algorithm that tried creating all possible models by creating all permutations of the predictors. This yielded similar results to the best subset so we used the Best Subset method from then on since that algorithm runs much faster. 
 
 ```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
@@ -394,7 +310,7 @@ and <span style = 'color:peachpuff2;'>Eight</span> based on Race_**") +
 
 ## Visualizing Simulations from the Model
 
-```{r fig.width = 10, fig.height = 10}
+```{r}
 
 schools_lm <- schools_cleaned %>%
   lm(`Test Score` ~ Test + Race + Grade, data = .)
@@ -450,12 +366,10 @@ obs <- schools_cleaned %>%
   xlab("Observed Test Score") 
 
 gridExtra::grid.arrange(pred, obs, nrow = 1, top = "Distribution of Responses")
-
 ```
-
 ## Generating Multiple Predictive Checks
 
-```{r eval=FALSE}
+```{r}
 nsims <- 1000
 
 sims <- map_dfc(1:nsims,
@@ -498,6 +412,8 @@ tibble(sims = sim_r_sq) %>%
   labs(title = "**Distribution of the _R_^2 Values**") +
   xlab("Simulations") +
   ylab("Count")
+
+ 
 ```
 
 
