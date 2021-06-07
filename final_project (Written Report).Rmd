@@ -59,7 +59,7 @@ regionizer <- read_csv(here::here("us census bureau regions and divisions.csv"))
 
 # Introduction
 
-INSERT INTRO
+The data used for this project is from the Urban Institute’s API which is widely used as an education data explorer. This specific dataset was designed to bring together multiple facets of U.S. education data into one file which includes information related to student’s $race$ and $sex$. The data is from 1992-2019 for every $state$ and is broken down by students enrolled in schools by school $year$. This dataset also includes the U.S. Census Bureau’s count for students enrolled in school  in each state along with the $total revenue$ and $total expenditure$ for each state. The revenue can be viewed on federal, state and local levels as well. The expenditure is divided into instruction, support services, capital outlay and an additional group with other expenditures. Student performances are assessed nationwide in grades 4 and 8 and are displayed in this data with the $average math test scores$ and $average English test scores$ for both grades. For purposes of this study, the data is analyzed across $Regions$ in the United States rather than individual states. The purpose of this research is to analyze a linear model to predict the relationship between $Reading Test Scores$ and $Math Test Scores$ across $Region$ and $Race$.
 
 ```{r}
 schools_cleaned <- schools %>%
@@ -391,7 +391,7 @@ EXPLAIN THIS GRAPH
 
 ## Visualizing Simulations from the Model
 
-Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is know as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values and then adding normally distributed errors to those values.
+Now that we have chosen a model, it is important that we test to see if we can make sound inferences from it. One method of conducting this test is known as predictive checks. For a linear regression model like the one we have, a predictive check consists of generating simulated data by first using the model to obtain predicted values, and then adding normally distributed errors to those values.
 
 We then compare the response variable distributions of the observed data with the simulated data as follows:
 
@@ -474,6 +474,11 @@ tibble(sims = sim_r_sq) %>%
   ylab("Count")
 ```
 
-From the plot above, we see that the R-squared from the regressions are between 0.79 and 0.81, with a mode around 0.805. Thus, we conclude that on average, our model does not account for 19.5% of the observed variability in the observed Test Scores.
+From the plot above, we see that the R-squared from the regressions are between 0.855 and 0.880, with a median around 0.869. Thus, we conclude that on average, our model does account for 86.9% of the observed variability in the observed Test Scores.
 
-The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data.
+The adjusted R-squared for the original model was 0.897, which is greater than the max of the simulated R-square values above. This is to be expected since the data simulated from the model could be more variable than the observed data. All in all, the model accurately describes the relationships that our present in the dataset.
+
+# Ethical Implications
+
+With our ending model, we believe that there are some implications we considered when we were creating this model. Analylzing this data, it is evident that the variables of $Test$ and $Grade$ are not the most impactful towards others, but $Race$ definitely is. So if we were to essentially recreate the model and put it out into the world, we should be more mindful of the Race variable and take into consideration the implications that can come about the data that is shown. If this data were to be published, it could be detrimental to some specific racial groups self-image if the data shows that statistically they would score lower than other races on a certain test. Doing this would be much more mindful to society as a whole and allow for the data to be presented in a manner that does not harm others.
+
