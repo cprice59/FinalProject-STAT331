@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 ```{r include=FALSE}
@@ -14,10 +14,22 @@ library(tidyverse)
 library(here)
 library(readxl)
 library(broom)
+library(ggtext)
+library(latex2exp)
 library(ggridges)
 library(olsrr)
 library(ggtext)
 ```
+
+```{r include=FALSE}
+theme_helper <- theme(
+  axis.text = element_text(size = 20),
+  axis.title = element_text(size = 26),
+  plot.title = element_text(size = 35),
+  plot.title.position = "plot"
+)
+```
+
 
 ```{r include=FALSE}
 schools <- read_xlsx(here::here("US_schools_data.xlsx"))
@@ -227,7 +239,7 @@ summary(test_model)
 
 After including the new Test variable as an explanatory variable in our model, we can see that this model does account for a larger proportion of variability in Test Score, with an Adjusted R-Squared value of 0.1288, which interpreted means that 12.88% of the variation in Test Score can be explained in our model. This in fact accounts for more variation than the other two models separately.
 
-# Additional Variables
+# Deciding on a Model
 
 ```{r}
 test_model <- schools_cleaned %>%
@@ -239,17 +251,88 @@ summary(test_model)
 
 To test to see how other variables improve our overall model, we included the Year variable to see how the Adjusted R-Squared would change with the addition. Running this new model, we can see that the Adjusted R-Squared is now 0.1569, which is almost a 3% increase in Adjusted R-Squared from our last model (0.1288). With this increase just by adding the Year variable, we will further explore into how other variables within the data can improve our model even more in the next section.
 
+## Linear Model Selection Steps
 
-```{r}
+### Using Best Subset Method
+
+We chose our model using the Best Subset method. This is done by stepping though each possible predictor if the model only had step $n$ predictors and creating a model using each predictor unused in step $1$ through $n-1$ before and seeing what the new adjusted $R^2$ is with all previous predictors picked in the model and the new predictor we are testing. If predictor that causes the best improvement of adjusted $R^2$ is picked as the new predictor to add to the model if you chose a model with step $n$ predictors.
+
+This can be visualized in a table that records the new best model at each step and keeps track of its adjusted $R^2$. For us, it ends up looking like this:
+
+
+```{r echo=FALSE}
+# set subtraction: https://stat.ethz.ch/R-manual/R-patched/library/base/html/sets.html
+
+predictor_diff <- function(x) {
+  return(unlist(str_split(x, " ")))
+}
+
+# Scorer is required for ols_step_best_subset
 temp <- mutate(drop_na(schools_cleaned, `Test Score`), Scorer = `Test Score`)
 
 model1 <- lm(Scorer ~ INSTRUCTION_EXPENDITURE + Test + Year + Region + Sex + Race  + Grade, data=temp)
 
 # We used these functions for STAT 334 (Applied Linear Models) to do variable selection
 # all_sub1 <- ols_step_all_possible(model1)
-best.sub1 <- ols_step_best_subset(model1)
+best_sub_predictors <- ols_step_best_subset(model1, metric = "adjr")
+
+best_sub_predictors <- best_sub_predictors %>%
+  select(n, predictors, adjr) %>%
+  as_tibble() %>%
+  mutate(
+    behind = lag(predictors),
+  ) %>%
+  rowwise() %>%
+  mutate(
+    predictor_added = setdiff(predictor_diff(predictors), predictor_diff(behind))
+  ) %>%
+  select(-behind)
+
+best_sub_predictors %>%
+  rename(`Model Predictors` = n,
+         Predictors = predictors,
+         `Adjusted R^2` = adjr,
+         `Predictor Added` = predictor_added)
 ```
 
+
+We can see that as the number of predictors we add increases, so does our model's adjusted $R^2$. However, if we look at how they are increasing, we see rate of increase after the number of predictors is $3$ is pretty negligible.
+
+```{r echo=FALSE, fig.width=10}
+best_sub_predictors %>%
+  mutate(
+    predictor_added = case_when(
+      predictor_added == "INSTRUCTION_EXPENDITURE" ~ "Inst. Exp.",
+      TRUE ~ predictor_added
+    )
+  ) %>%
+  ggplot(mapping = aes(x = n, y = adjr)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(x = "Number of Predictors in Model",
+       y = TeX(r"(Adjusted $R^2$)"),
+       title = TeX(r"(Affect of Addition of New Predictors to Model)")) +
+  geom_text(aes(label = predictor_added),
+            size = 8,
+            nudge_y = -0.015,
+            nudge_x = 0.25) +
+  scale_x_continuous(breaks = best_sub_predictors$n) +
+  ylim(0.6, 1) +
+  theme_bw(base_size = 29) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title.y = element_text(angle=0,vjust = 0.5),
+    axis.ticks = element_blank(),
+    plot.title.position = "plot"
+  )
+```
+
+Thus, for performance reasons and to prevent possibly overfitting our model, we decided to only keep $Grade$, $Test$, and $Race$ in our predictor.
+
+### Using All Possible Models Method
+
+One thing to note here is that we also ran a model selection algorithm that tried creating all possible models by creating all permutations of the predictors. This yielded similar results to the best subset so we used the Best Subset method from then on since that algorithm runs much faster. 
 
 ```{r, fig.width = 10, fig.height = 10}
 schools_cleaned %>%
@@ -293,9 +376,10 @@ obs <- schools_cleaned %>%
 gridExtra::grid.arrange(pred, obs, nrow = 1)
 
 ```
+
 ## Generating Multiple Predictive Checks
 
-```{r}
+```{r eval=FALSE}
 nsims <- 1000
 
 sims <- map_dfc(1:nsims,
